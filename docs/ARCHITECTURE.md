@@ -264,3 +264,97 @@ Type-safe navigation routes are managed with `NavRoute` in `AudioBookBayNavHost`
 - `NavRoute.Library` — Local library of completed audiobooks, progress badges, offline playback.
 - `NavRoute.NowPlaying` — Full-screen audio player with scrub bar, speed modifier, sleep timer, and chapter drawer.
 - `NavRoute.Settings` — Theme, Wi-Fi constraints, storage directory, and content sources.
+
+
+## Implementation update — 2026-11-01
+
+Discovery uses a Hilt HomeViewModel, read-only StateFlow<UiState<HomeContent>>,
+and lifecycle-aware Compose collection. HomeContent retains loaded cards during
+refresh and pagination. Refresh cancels prior work; pages deduplicate book IDs,
+and errors retry the failed page without advancing the page counter.
+
+Search uses a 300 ms cancellable delay and cancels stale queries immediately.
+History is an ordered list capped at 20 entries in DataStore, migrated from the
+original string set. DetailViewModel decodes the type-safe SavedStateHandle route.
+
+LibriVox IDs are namespaced as librivox:<id>. Requests use documented coverart and
+id parameters. url_other uses JsonElement because its shape varies. Ascending
+ordering is deliberate: descending IDs included unfinished recordings in a live
+API check. Pagination stays on one source until refresh. ABB search returned home
+listings in verification, so unrelated results are rejected before fallback.
+Responses are closed, cancellation propagates, and transport errors can trigger
+LibriVox fallback. The dispatcher now has the required @IoDispatcher qualifier.
+
+Room version 2 adds catalog_cache for listing snapshots and full details, separate
+from owned library metadata and local file paths. Migration 1 to 2 creates only
+this table; destructive migration was removed. Refresh invalidates older pages.
+An offline catalog stays on cached pages until refresh to prevent source mixing.
+Cache write failure cannot hide a successful network response.
+
+The verified ABB detail path is /abss/<slug>/, replacing the scaffold's incorrect
+/audio/<slug>/. The parser rejects challenge pages as details and separates
+inline author, narrator, format and bitrate labels. No access control is bypassed.
+
+
+### Native torrent implementation
+
+TorrentDownloadManagerImpl now owns an IO-dispatched SessionManager behind the
+existing domain contract. Room downloads are the observable queue. Atomic internal
+JSON request files and native resume blobs survive manager/session recreation.
+Interrupted requests restore paused and need a user resume, so process startup does
+not attempt an unlawful background foreground-service launch. Queue observation
+normalizes interrupted in-memory states without starting a native session.
+
+Only v1/hybrid hashes and the configured arm64 native binary are currently supported.
+API 26/27 can browse but the engine explicitly requires API 28. All destination and
+metadata file paths must stay within app-specific downloads. Default selection skips
+non-audio files. Metadata acquisition uses UPLOAD_MODE, then enables piece requests
+after paths and priorities are validated. Initial zero priorities caused local seeds
+to disconnect, which the native transfer test exposed.
+
+Native add/resume alerts handle asynchronous errors and checkpoint data. Native status
+is polled every 2 seconds; periodic resume checkpoints run every 30 seconds, plus pause,
+completion and shutdown saves. Completed torrents pause rather than seed indefinitely.
+The foreground service observes persisted progress, stops when idle, and handles API35
+onTimeout. Idle cleanup checks under the engine lock so it cannot stop a newly queued
+transfer. Android15 timeout behavior still needs an actual API35 device test.
+
+Downloads UI accepts a manual magnet or SAF torrent document and delegates to the domain
+manager. Imports copy at most 10 MiB into temporary cache before the engine stores its
+private copy. Notification permission is requested on user download/import actions.
+Queue removal preserves files. Automatic transfer into the library is the next milestone.
+
+
+## Product revision: downloader only (2026-11-01)
+
+This section supersedes the earlier proposed player/library subsystems. The user
+uses a separate player. Media3, AudioPlaybackService and player/library navigation
+have been removed; the only long-running service is the dataSync download service.
+Legacy playback/bookmark/chapter tables remain as inert compatibility data.
+
+DownloadMetadata now requires author, book title and a destination tree URI. The
+native engine owns app-specific staging paths rather than exposing them as the
+user's final destination. A completed native payload persists a PublicationFile
+manifest and enters PUBLISHING. BookPublisher streams to Android DocumentsContract
+URIs via SafPublicationStorage, verifies SHA-256, journals completed copies, then
+renames its hidden staging book directory into Author/Book Title. Collisions get
+numbered book folders and never replace existing books. Torrent wrappers are removed
+without flattening disc folders. Invalid path segments cannot escape the chosen tree.
+
+DownloadFolderSettings persists the ACTION_OPEN_DOCUMENT_TREE read/write grant and
+validates create/write/rename support. The suggested initial location is Android;
+the user creates/selects AudioBooks underneath it. The connected Android14 phone
+confirmed this exact location is permitted. If an OEM denies it, the UI requires an
+explicit alternative location. No all-files permission or raw shared POSIX path is used.
+
+Room version3 adds author, destinationTreeUri, publishedFolderUri and
+publicationProgress to downloads. Migration2to3 is additive; legacy tables are kept.
+COMPLETED means shared verification succeeded, not simply native transfer completion.
+PUBLICATION_FAILED retains verified staging for retry without torrent downloads.
+Native resume state and publication journals have separate lifetimes. Copying remains
+inside the foreground service's active-work budget; shutdown interrupts it safely.
+
+The publisher's durable file checkpoints support process-independent recreation.
+A per-book marker recovers rename-before-commit interruptions. Low-storage write
+failures retain runtime error state and source audio. Successful publication removes
+owned temporary audio; removing a history entry never deletes the shared audiobook.

@@ -1,66 +1,68 @@
 package com.audiobookbay.app.ui.screens.settings
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import com.audiobookbay.app.ui.components.GlassPanel
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.audiobookbay.app.R
+import com.audiobookbay.app.ui.components.DownloadFolderPicker
 
-/**
- * Settings screen.
- *
- * Designed to support:
- * - Theme selection (system default, dynamic color, light, dark)
- * - Torrent download preferences (Wi-Fi only, speed caps, max connections)
- * - Storage path selection & scoped storage management
- * - Playback defaults (default speed, seek intervals, auto-rewind on resume)
- * - Content source configuration (AudioBookBay, LibriVox, Internet Archive)
- * - Open source licenses and legal disclaimers
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("Settings") },
-        )
-        Column(modifier = Modifier.padding(vertical = 8.dp)) {
-            ListItem(
-                headlineContent = { Text("Appearance & Theme") },
-                supportingContent = { Text("System default (Dynamic Color enabled)") },
-            )
-            HorizontalDivider()
-            ListItem(
-                headlineContent = { Text("Download Settings") },
-                supportingContent = { Text("Wi-Fi only, App-specific storage") },
-            )
-            HorizontalDivider()
-            ListItem(
-                headlineContent = { Text("Playback Preferences") },
-                supportingContent = { Text("Speed 1.0x, Skip 30s / Rewind 15s") },
-            )
-            HorizontalDivider()
-            ListItem(
-                headlineContent = { Text("Audio Sources") },
-                supportingContent = { Text("AudioBookBay, LibriVox Public Domain") },
-            )
-            HorizontalDivider()
-            ListItem(
-                headlineContent = { Text("Storage Usage") },
-                supportingContent = { Text("Manage cached data and audio files") },
-            )
-            HorizontalDivider()
-            ListItem(
-                headlineContent = { Text("About") },
-                supportingContent = { Text("AudioBookBay Android v0.1.0 (Alpha)") },
-            )
+    val vm: SettingsViewModel = hiltViewModel()
+    val folder by vm.folder.collectAsStateWithLifecycle()
+    val busy by vm.busy.collectAsStateWithLifecycle()
+    val error by vm.error.collectAsStateWithLifecycle()
+    val wifiOnly by vm.wifiOnly.collectAsStateWithLifecycle()
+    val networkError by vm.networkError.collectAsStateWithLifecycle()
+    val keyConfigured by vm.keyConfigured.collectAsStateWithLifecycle()
+    val keyBusy by vm.keyBusy.collectAsStateWithLifecycle()
+    val keyError by vm.keyError.collectAsStateWithLifecycle()
+    val keyFailure by vm.keyFailure.collectAsStateWithLifecycle()
+    val keySaved by vm.keySaved.collectAsStateWithLifecycle()
+    // Credentials must not enter saved instance state or be displayed after saving.
+    var apiKey by remember { mutableStateOf("") }
+    LaunchedEffect(keySaved) { if (keySaved) apiKey = "" }
+    Column(Modifier.fillMaxSize()) {
+        TopAppBar(title = { Text(stringResource(R.string.nav_settings)) })
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            GlassPanel(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.storage_section))
+            DownloadFolderPicker(vm.label(folder), folder != null, !busy, vm::select)
+            if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (error) Text(stringResource(R.string.folder_access_error), color = MaterialTheme.colorScheme.error)
+            } }
+            GlassPanel(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.network_section))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.wifi_only_title), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.wifi_only_description), style = MaterialTheme.typography.bodySmall)
+                }
+                Switch(checked = wifiOnly, onCheckedChange = vm::setWifiOnly)
+            }
+            if (networkError) Text(stringResource(R.string.network_settings_error), color = MaterialTheme.colorScheme.error)
+            } }
+            ApiKeySettingsCard(apiKey, keyConfigured, keyBusy, keySaved,
+                if (keyError) keyFailure ?: com.audiobookbay.app.data.storage.ApiKeyFailure.STORAGE else null,
+                onChange = { apiKey = it }, onSave = { vm.saveApiKey(apiKey) },
+                onRemove = { vm.saveApiKey("") })
+            AppUpdateSettings()
+            CrashReportSettings()
+            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.large) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.about_downloads))
+            Text(stringResource(R.string.external_player_hint))
+            Text(stringResource(R.string.shared_files_retained), style = MaterialTheme.typography.bodySmall)
+            } }
         }
     }
 }

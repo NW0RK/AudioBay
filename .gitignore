@@ -23,5 +23,9 @@ local.properties
 *.log
 gen/
 out/
+.tools/
+**/build/
 *.hprof
 .env
+
+.kotlin/

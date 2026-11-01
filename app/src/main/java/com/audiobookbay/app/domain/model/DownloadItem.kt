@@ -24,6 +24,10 @@ data class DownloadItem(
     val errorMessage: String? = null,
     val addedTimestamp: Long = System.currentTimeMillis(),
     val completedTimestamp: Long? = null,
+    val author: String? = null,
+    val destinationTreeUri: String? = null,
+    val publishedFolderUri: String? = null,
+    val publicationProgress: Float = 0f,
 )
 
 enum class DownloadStatus {
@@ -31,8 +35,18 @@ enum class DownloadStatus {
     CHECKING,
     DOWNLOADING,
     PAUSED,
+    PUBLISHING,
+    PUBLICATION_FAILED,
     COMPLETED,
     SEEDING,
     ERROR,
     CANCELLED,
+    WAITING_FOR_WIFI,
+}
+
+@Serializable
+data class DownloadMetadata(val author: String, val title: String, val destinationTreeUri: String) {
+    init {
+        require(author.isNotBlank() && title.isNotBlank() && destinationTreeUri.isNotBlank()) { "Author, title and destination are required" }
+    }
 }

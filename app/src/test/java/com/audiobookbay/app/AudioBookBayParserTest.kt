@@ -74,4 +74,36 @@ class AudioBookBayParserTest {
         assertEquals("4a8a35e2528b97d27e2832810a0e28f3521b38e4", detail.torrentInfo?.infoHash)
         assertTrue(detail.torrentInfo?.magnetUri?.startsWith("magnet:?xt=urn:btih:4a8a35e2528b97d27e2832810a0e28f3521b38e4") == true)
     }
+
+    @Test
+    fun inlineMetadata_doesNotMergeAuthorNarratorAndFormat() {
+        val detail = parser.parseAudiobookDetail("""
+            <div class="postTitle"><h1>A Public Domain Story - Example Writer</h1></div>
+            <div class="postContent"><p>Written by Example Writer Read by Example Reader Format: MP3 Bitrate: 96 Kbps Unabridged</p></div>
+        """.trimIndent(), "story", "https://example.org")
+        assertEquals("Example Writer", detail.author)
+        assertEquals("Example Reader", detail.narrator)
+        assertEquals("MP3", detail.audioFormat)
+        assertEquals("96 Kbps", detail.bitrate)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun challengePage_isNotAcceptedAsBookDetail() {
+        parser.parseAudiobookDetail("<h1>Just a moment</h1>", "story", "https://example.org")
+    }
+
+    @Test
+    fun listHandlesRelativeLinksAndPlainCategoryText() {
+        val books = parser.parseAudiobookList("""
+            <article class="post">
+                <div class="postTitle"><h2><a href="/abss/story/">Story - Example Writer</a></h2></div>
+                <div class="postInfo">Category: Classic Language: English</div>
+                <div class="postContent"><img src="/cover.jpg" /></div>
+            </article>
+        """.trimIndent(), "https://example.org")
+        assertEquals("https://example.org/abss/story/", books.single().detailUrl)
+        assertEquals("https://example.org/cover.jpg", books.single().coverImageUrl)
+        assertEquals("Classic", books.single().category)
+        assertEquals("Example Writer", books.single().author)
+    }
 }

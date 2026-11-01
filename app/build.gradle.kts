@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,17 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.hilt.android)
+}
+
+val privateProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+// Shared artifacts must never contain the developer's private API key.
+val geminiKey = if (providers.gradleProperty("publicBuild").orNull == "true") {
+    provider { "" }
+} else {
+    providers.environmentVariable("GEMINI_API_KEY")
+        .orElse(provider { privateProperties.getProperty("GEMINI_API_KEY", "") })
 }
 
 android {
@@ -15,8 +28,9 @@ android {
         applicationId = "com.audiobookbay.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 8
+        versionName = "0.1.7"
+        buildConfigField("String", "GEMINI_API_KEY", "\"${geminiKey.get().replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -97,12 +111,6 @@ dependencies {
     // DataStore
     implementation(libs.datastore.preferences)
 
-    // Media3 / ExoPlayer
-    implementation(libs.media3.exoplayer)
-    implementation(libs.media3.session)
-    implementation(libs.media3.ui)
-    implementation(libs.media3.common)
-
     // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx)
@@ -136,6 +144,8 @@ dependencies {
     implementation(libs.timber)
 
     // Testing
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)

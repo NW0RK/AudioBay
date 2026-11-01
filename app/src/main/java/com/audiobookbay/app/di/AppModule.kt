@@ -31,6 +31,11 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideBookPublisher(@ApplicationContext context: Context, storage: com.audiobookbay.app.data.storage.SafPublicationStorage, json: Json): com.audiobookbay.app.data.storage.BookPublisher =
+        com.audiobookbay.app.data.storage.BookPublisher(java.io.File(context.filesDir, "publication-state"), storage, json)
+
+    @Provides
+    @Singleton
     fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
         return context.dataStore
     }

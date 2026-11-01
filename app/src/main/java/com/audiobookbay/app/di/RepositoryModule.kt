@@ -4,12 +4,8 @@ import com.audiobookbay.app.data.remote.AudiobookRemoteDataSource
 import com.audiobookbay.app.data.remote.AudiobookRemoteDataSourceImpl
 import com.audiobookbay.app.data.repository.AudiobookRepositoryImpl
 import com.audiobookbay.app.data.repository.AudiobookSearchRepositoryImpl
-import com.audiobookbay.app.data.repository.LibraryRepositoryImpl
-import com.audiobookbay.app.data.repository.PlaybackProgressRepositoryImpl
 import com.audiobookbay.app.domain.repository.AudiobookRepository
 import com.audiobookbay.app.domain.repository.AudiobookSearchRepository
-import com.audiobookbay.app.domain.repository.LibraryRepository
-import com.audiobookbay.app.domain.repository.PlaybackProgressRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -19,6 +15,17 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
+    @Binds
+    @Singleton
+    abstract fun bindAppUpdates(impl: com.audiobookbay.app.data.repository.GitHubAppUpdateRepository): com.audiobookbay.app.domain.repository.AppUpdateRepository
+    @Binds
+    @Singleton
+    abstract fun bindBookNameCorrector(impl: com.audiobookbay.app.data.remote.GeminiBookNameCorrector): com.audiobookbay.app.domain.repository.BookNameCorrector
+
+    @Binds
+    @Singleton
+    abstract fun bindSavedBooksRepository(impl: com.audiobookbay.app.data.repository.SavedBooksRepositoryImpl): com.audiobookbay.app.domain.repository.SavedBooksRepository
+
 
     @Binds
     @Singleton
@@ -38,15 +45,4 @@ abstract class RepositoryModule {
         impl: AudiobookSearchRepositoryImpl,
     ): AudiobookSearchRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindLibraryRepository(
-        impl: LibraryRepositoryImpl,
-    ): LibraryRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindPlaybackProgressRepository(
-        impl: PlaybackProgressRepositoryImpl,
-    ): PlaybackProgressRepository
 }

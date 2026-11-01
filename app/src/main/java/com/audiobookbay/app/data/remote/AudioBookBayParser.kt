@@ -1,12 +1,12 @@
 package com.audiobookbay.app.data.remote
 
+import com.audiobookbay.app.domain.model.AudiobookComment
 import com.audiobookbay.app.domain.model.Audiobook
 import com.audiobookbay.app.domain.model.AudiobookDetail
 import com.audiobookbay.app.domain.model.AudiobookSource
 import com.audiobookbay.app.domain.model.TorrentInfo
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
 import timber.log.Timber
 
 /**
@@ -28,20 +28,24 @@ class AudioBookBayParser {
         val audiobooks = mutableListOf<Audiobook>()
 
         // AudioBookBay typically uses .post or article elements for listings
-        val postElements = document.select("div.post")
+        val postElements = document.select("div.post, article.post")
         for (post in postElements) {
             try {
                 val titleElement = post.selectFirst(".postTitle h2 a, .postTitle a, h2 a") ?: continue
                 val title = titleElement.text().trim()
                 val detailUrl = titleElement.absUrl("href")
                 val id = extractIdFromUrl(detailUrl)
+                if (title.isBlank() || id.isBlank()) continue
 
                 val coverImg = post.selectFirst(".postContent img")?.absUrl("src")
 
                 // Extract metadata text
                 val contentText = post.select(".postContent").text()
                 val category = post.select(".postInfo a[rel='category tag']").firstOrNull()?.text()
+                    ?: Regex("Category:\\s*(.*?)(?:Language:|$)", RegexOption.IGNORE_CASE)
+                        .find(post.select(".postInfo").text())?.groupValues?.get(1)?.trim()
 
+                val metadata = parseMetadata(post)
                 audiobooks.add(
                     Audiobook(
                         id = id,
@@ -50,6 +54,9 @@ class AudioBookBayParser {
                         narrator = extractNarrator(contentText),
                         coverImageUrl = coverImg,
                         category = category,
+                        language = metadata["Language"], datePosted = metadata["Posted"],
+                        uploader = metadata["Shared by"], audioFormat = metadata["Format"],
+                        bitrate = metadata["Bitrate"], formattedSize = metadata["File Size"],
                         detailUrl = detailUrl,
                         source = AudiobookSource.AUDIOBOOKBAY,
                     ),
@@ -67,9 +74,13 @@ class AudioBookBayParser {
     fun parseAudiobookDetail(html: String, idOrSlug: String, baseUrl: String): AudiobookDetail {
         val document: Document = Jsoup.parse(html, baseUrl)
 
-        val title = document.selectFirst(".postTitle h1, h1")?.text()?.trim() ?: idOrSlug
+        val title = document.selectFirst(".postTitle h1, article h1")?.text()?.trim()
+            ?.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("Unrecognized audiobook detail page")
         val coverUrl = document.selectFirst(".postContent img")?.absUrl("src")
-        val description = document.select(".postContent p").text().trim()
+        val metadataText = document.select(".postContent").text()
+        val description = document.select(".postContent p")
+            .filterNot { it.text().matches(Regex("(?is)^(?:Shared by|Written by|Read by|Format:|Bitrate:|Unabridged|Abridged).*")) }
+            .joinToString("\n\n") { it.text().trim() }.trim()
 
         // Extract Info Hash from table
         val infoHash = extractInfoHash(document)
@@ -94,17 +105,49 @@ class AudioBookBayParser {
             null
         }
 
+        val metadata = parseMetadata(document.selectFirst("div.post, article.post") ?: document.body())
         return AudiobookDetail(
             id = idOrSlug,
             title = title,
-            author = extractAuthor(description, title),
-            narrator = extractNarrator(description),
+            author = extractAuthor(metadataText, title),
+            narrator = extractNarrator(metadataText),
             description = description,
+            comments = parseComments(document),
             coverImageUrl = coverUrl,
             torrentInfo = torrentInfo,
+            language = metadata["Language"].orEmpty(), datePosted = metadata["Posted"],
+            uploader = metadata["Shared by"], formattedSize = metadata["File Size"].orEmpty(),
+            audioFormat = metadata["Format"].orEmpty(), bitrate = metadata["Bitrate"],
             source = AudiobookSource.AUDIOBOOKBAY,
         )
     }
+
+    private fun parseMetadata(post: org.jsoup.nodes.Element): Map<String, String> {
+        val copy = post.clone()
+        copy.select(".commentlist, .comment-list, .commentZone, #comments, script, style").remove()
+        val text = copy.select(".postInfo, .postContent").joinToString("\n") { it.wholeText() }
+        val labels = "Language|Keywords|Posted|Format|Bitrate|File Size|Shared by|Written by|Read by|Category"
+        return Regex("(?i)($labels):\\s*(.*?)(?=(?:$labels):|\\b(?:Unabridged|Abridged)\\b|[\\r\\n]|$)")
+            .findAll(text).mapNotNull { match ->
+                val key = labels.split("|").first { it.equals(match.groupValues[1], true) }
+                val value = match.groupValues[2].trim().trimEnd('/').trim()
+                value.takeIf { it.isNotBlank() }?.let { key to it }
+            }.toMap()
+    }
+
+    private fun parseComments(document: Document): List<AudiobookComment> =
+        document.select(".commentlist li[id^=comment-], .comment-list li[id^=comment-], .commentZone [id^=comment-]")
+            .distinctBy { it.id() }
+            .mapNotNull { element ->
+                // Remove nested replies before reading this comment's content.
+                val own = element.clone().apply { select(".children, ul, ol, script, style, .reply, form").remove() }
+                val author = own.selectFirst(".comment-author cite, .comment-author .fn, cite, .commentAuthor")?.text().orEmpty()
+                val date = own.selectFirst(".comment-meta, .commentmetadata, .commentDate, time, small")?.text().orEmpty()
+                val body = own.selectFirst(".comment-content, .comment-body .comment-text, .commentText")
+                val text = if (body != null) body.select("p").takeIf { it.isNotEmpty() }?.joinToString("\n\n") { it.text() } ?: body.text()
+                    else own.select("p").joinToString("\n\n") { it.text() }
+                if (text.isBlank()) null else AudiobookComment(element.id(), author, date, text)
+            }
 
     private fun extractInfoHash(document: Document): String? {
         val rows = document.select("table tr")
@@ -142,17 +185,17 @@ class AudioBookBayParser {
     }
 
     private fun extractAuthor(text: String, titleFallback: String): String {
-        val authorMatch = Regex("(?i)(?:author|written by)[:\\s]+([^\\n,\\.<]+)").find(text)
-        if (authorMatch != null) {
-            return authorMatch.groupValues[1].trim()
-        }
-        // Check if title has "by Author"
-        val byMatch = Regex("(?i)by\\s+([^\\–\\-\\[\\(]+)").find(titleFallback)
-        return byMatch?.groupValues?.get(1)?.trim() ?: "Unknown Author"
+        val author = metadataValue(text, "author|written by")
+        if (author != null) return author
+        val byMatch = Regex("(?i)\\bby\\s+(.+)$").find(titleFallback)
+        return byMatch?.groupValues?.get(1)?.trim()
+            ?: titleFallback.substringAfterLast(" - ", "").takeIf { it.isNotBlank() }
+            ?: "Unknown Author"
     }
 
-    private fun extractNarrator(text: String): String? {
-        val match = Regex("(?i)(?:narrator|read by)[:\\s]+([^\\n,\\.<]+)").find(text)
-        return match?.groupValues?.get(1)?.trim()
-    }
+    private fun extractNarrator(text: String): String? = metadataValue(text, "narrator|narrated by|read by")
+
+    private fun metadataValue(text: String, labels: String): String? =
+        Regex("(?i)(?:$labels)[:\\s]+(.+?)(?=\\s+(?:read by|narrated by|narrator|format|bitrate|language|unabridged|abridged)\\b|[\\n]|$)")
+            .find(text)?.groupValues?.get(1)?.trim()?.trimEnd('.')
 }
