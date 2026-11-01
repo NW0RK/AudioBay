@@ -22,6 +22,8 @@ class SettingsViewModel @Inject constructor(
     val keyBusy = _keyBusy.asStateFlow()
     private val _keyError = MutableStateFlow(false)
     val keyError = _keyError.asStateFlow()
+    private val _keyFailure = MutableStateFlow<com.audiobookbay.app.data.storage.ApiKeyFailure?>(null)
+    val keyFailure = _keyFailure.asStateFlow()
     private val _keySaved = MutableStateFlow(false)
     val keySaved = _keySaved.asStateFlow()
 
@@ -29,13 +31,20 @@ class SettingsViewModel @Inject constructor(
         if (_keyBusy.value) return
         _keyBusy.value = true
         _keyError.value = false
+        _keyFailure.value = null
         _keySaved.value = false
         viewModelScope.launch {
             try {
                 keys.save(input)
                 _keySaved.value = true
             } catch (e: CancellationException) { throw e }
-            catch (_: Exception) { _keyError.value = true }
+            catch (e: Exception) {
+                val category = (e as? com.audiobookbay.app.data.storage.ApiKeySaveException)?.failure
+                    ?: com.audiobookbay.app.data.storage.ApiKeyFailure.STORAGE
+                timber.log.Timber.w("API key save failed: %s", category.name)
+                _keyFailure.value = category
+                _keyError.value = true
+            }
             finally { _keyBusy.value = false }
         }
     }

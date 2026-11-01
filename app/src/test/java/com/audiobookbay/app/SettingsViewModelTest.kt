@@ -71,6 +71,18 @@ class SettingsViewModelTest {
         assertTrue(vm.keySaved.value)
     }
 
+    @Test fun keyFailuresExposeOnlyTheSafeCategory() = runTest(dispatcher) {
+        val vm = vm()
+        for (category in com.audiobookbay.app.data.storage.ApiKeyFailure.entries) {
+            coEvery { keys.save(any()) } throws com.audiobookbay.app.data.storage.ApiKeySaveException(category)
+            vm.saveApiKey("synthetic-key")
+            runCurrent()
+            org.junit.Assert.assertEquals(category, vm.keyFailure.value)
+            assertFalse(vm.keySaved.value)
+            assertFalse(vm.keyBusy.value)
+        }
+    }
+
     @Test fun togglingWifiOnlyUpdatesTheEngine() = runTest(dispatcher) {
         coEvery { manager.updateNetworkSettings(true, 0, 0) } returns Unit
         val vm = vm()

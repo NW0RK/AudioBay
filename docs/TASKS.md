@@ -294,3 +294,16 @@ Verification: assembleDebug, testDebugUnitTest (73 tests), lintDebug and four pe
 - [x] Prepare optimized v0.1.0 preview APK, release notes and SHA-256 checksum; verify APK alignment and v2/v3 signatures using the existing local development certificate.
 - [x] Verify release assembly, release lint (0 errors), all 95 JVM tests and device-test APK compilation (.tools/release-checks.log, .tools/release-final-tests.log).
 - [ ] Run the new encrypted-key persistence/removal device test and visually verify Settings; no phone connected during this release task.
+
+## API-key recovery and in-app updates - 2026-11-01
+
+- [x] Accept quoted Gemini keys and invisible clipboard edge characters; explicitly handle first-use Keystore aliases and verify encrypt/decrypt plus persisted bytes before reporting success.
+- [x] Preserve previous credential bytes on failed replacement, retain entered text on failure, and distinguish format/encryption/storage errors with category-only logging.
+- [x] Scan all fetched branch/tag history and working files for credential patterns and the known local key; no findings. Make NW0RK/AudioBay public as explicitly selected.
+- [x] Add a Hilt-backed domain update contract, semantic version/preview selection, daily automatic checks on app opening, manual checks and in-app availability notice.
+- [x] Add explicit update download, progress, cancellation/retry, private cache storage and restoration of verified APKs after process recreation.
+- [x] Check SHA-256, package ID, version name/increasing code, SDK, torrent-native ABI and installed signing-certificate compatibility before installation.
+- [x] Add narrow read-only FileProvider handoff, Android install-source permission flow, final system confirmation and retained install action after denial; never uninstall as a fallback.
+- [x] Verify optimized 0.1.1/code 2 assembly, 115 JVM tests, release lint (0 errors) and device-test APK compilation (.tools/update-final-checks.log). Prepare release APK, matching development signature and checksum.
+- [ ] Reproduce the originally reported key-save failure on the phone and run the isolated real-Keystore test plus optimized Settings visual checks; no Android device connected.
+- [ ] Exercise actual permission denial/installer cancellation and an installed upgrade while verifying Saved books, queue, persistent folder grants, preferences and the saved key. No Room or audiobook-storage migration was introduced.

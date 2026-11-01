@@ -11,6 +11,12 @@ class ApiKeyValidationTest {
         assertEquals("", normalizeApiKey("  "))
     }
 
+    @Test fun acceptsQuotedAndInvisibleClipboardEdges() {
+        val key = "AIza" + "x".repeat(35)
+        assertEquals(key, normalizeApiKey("\uFEFF\u200B\"$key\"\u200B"))
+        assertEquals(key, normalizeApiKey(" '$key' "))
+    }
+
     @Test fun rejectsHeadersWhitespaceAndOversizedInput() {
         listOf("key\r\nheader", "Bearer key", "a".repeat(513), "ключ").forEach { value ->
             assertThrows(IllegalArgumentException::class.java) { normalizeApiKey(value) }

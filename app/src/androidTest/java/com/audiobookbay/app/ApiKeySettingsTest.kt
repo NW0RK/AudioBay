@@ -19,13 +19,23 @@ class ApiKeySettingsTest {
         try {
             val first = ApiKeySettings(context, Dispatchers.IO)
             assertEquals("", first.key())
-            first.save("  synthetic-key_123  ")
+            val synthetic = "AIza" + "x".repeat(35)
+            first.save("\uFEFF\"$synthetic\"\u200B")
             assertTrue(first.configured.value)
             val bytes = File(directory, "gemini-key").readBytes()
-            assertFalse(bytes.toString(Charsets.ISO_8859_1).contains("synthetic-key_123"))
+            assertFalse(bytes.toString(Charsets.ISO_8859_1).contains(synthetic))
             val reopened = ApiKeySettings(context, Dispatchers.IO)
-            assertEquals("synthetic-key_123", reopened.key())
+            assertEquals(synthetic, reopened.key())
             assertTrue(reopened.configured.value)
+            try {
+                reopened.save("Bearer bad-input")
+                fail("Invalid input must fail")
+            } catch (e: com.audiobookbay.app.data.storage.ApiKeySaveException) {
+                assertEquals(com.audiobookbay.app.data.storage.ApiKeyFailure.FORMAT, e.failure)
+            }
+            assertEquals(synthetic, reopened.key())
+            reopened.save("replacement-key_123")
+            assertEquals("replacement-key_123", ApiKeySettings(context, Dispatchers.IO).key())
             reopened.save("")
             assertFalse(reopened.configured.value)
             assertFalse(File(directory, "gemini-key").exists())

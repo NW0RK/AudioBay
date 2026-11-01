@@ -29,6 +29,13 @@ shown again or logged. Removing it disables correction in shared builds; manual 
 remains available. A personal key takes precedence over any private-build default.
 
 Saving checks the key's basic format; Google validates it when correction is used.
+Pasted keys may include surrounding quotes, whitespace, a BOM or zero-width edge
+characters; those wrappers are removed. Interior spaces, header labels and non-key
+characters are rejected. Format errors are distinct from Android encryption and
+storage errors. Successful saves require encrypt/decrypt and persisted-byte checks;
+failed replacement attempts restore the previous encrypted bytes. Only a safe failure
+category is logged. The original reported phone failure has not been reproduced
+without a device, so real optimized-release verification remains outstanding.
 Invalid/revoked keys and quota errors keep manual downloads available. Uninstalling
 the app removes the saved credential. Correction sends entered names to Google using
 the user's API project and quota.
