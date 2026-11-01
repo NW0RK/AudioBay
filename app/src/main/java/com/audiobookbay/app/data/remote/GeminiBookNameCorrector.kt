@@ -1,6 +1,8 @@
 package com.audiobookbay.app.data.remote
 
 import com.audiobookbay.app.BuildConfig
+import com.audiobookbay.app.data.storage.ApiKeySettings
+import kotlinx.coroutines.flow.map
 import com.audiobookbay.app.di.IoDispatcher
 import com.audiobookbay.app.domain.model.Resource
 import com.audiobookbay.app.domain.repository.BookNameCorrector
@@ -26,6 +28,7 @@ import kotlin.coroutines.resumeWithException
 class GeminiBookNameCorrector @Inject constructor(
     client: OkHttpClient,
     @IoDispatcher private val io: CoroutineDispatcher,
+    private val keys: ApiKeySettings,
 ) : BookNameCorrector {
     // Dedicated client: never log names, credentials, or Google's error bodies.
     private val client = client.newBuilder().apply {
@@ -34,16 +37,18 @@ class GeminiBookNameCorrector @Inject constructor(
     }.callTimeout(15, TimeUnit.SECONDS).retryOnConnectionFailure(false)
         .followRedirects(false).followSslRedirects(false).build()
     private val mutex = Mutex()
-    override val available get() = BuildConfig.GEMINI_API_KEY.isNotBlank()
+    override val available get() = keys.configured.value || BuildConfig.GEMINI_API_KEY.isNotBlank()
+    override val availability = keys.configured.map { it || BuildConfig.GEMINI_API_KEY.isNotBlank() }
 
     override suspend fun correct(title: String, author: String): Resource<CorrectedBookNames> = withContext(io) {
-        if (!available) return@withContext Resource.Error("Name correction is not configured")
         if (title.isBlank() && author.isBlank()) return@withContext Resource.Error("Enter a title or author first")
         mutex.withLock {
             try {
+                val key = keys.key().ifBlank { BuildConfig.GEMINI_API_KEY }
+                if (key.isBlank()) return@withLock Resource.Error("Name correction is not configured")
                 val request = Request.Builder()
                     .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent")
-                    .header("x-goog-api-key", BuildConfig.GEMINI_API_KEY)
+                    .header("x-goog-api-key", key)
                     .post(GeminiBookNames.request(title, author).toRequestBody("application/json".toMediaType()))
                     .build()
                 val response = client.newCall(request).awaitBody()

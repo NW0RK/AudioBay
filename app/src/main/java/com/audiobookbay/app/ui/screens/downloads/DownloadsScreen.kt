@@ -36,6 +36,7 @@ fun DownloadsScreen() {
     val error by vm.error.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
     val correcting by vm.correcting.collectAsStateWithLifecycle()
+    val correctionAvailable by vm.correctionAvailability.collectAsStateWithLifecycle()
     val correctionFailed by vm.correctionFailed.collectAsStateWithLifecycle()
     val canUndoNames by vm.canUndoNames.collectAsStateWithLifecycle()
     val author by vm.author.collectAsStateWithLifecycle()
@@ -72,7 +73,7 @@ fun DownloadsScreen() {
                         catalogBook = vm.isCatalogDownload, editingDownload = editing != null,
                         expanded = setupExpanded, editingMetadata = editingMetadata, editingLink = editingLink,
                         showingFolder = showingFolder, busy = busy, wifiOnly = wifiOnly, error = error,
-                        correctionAvailable = vm.correctionAvailable, correcting = correcting,
+                        correctionAvailable = correctionAvailable, correcting = correcting,
                         correctionFailed = correctionFailed, canUndoNames = canUndoNames,
                     ),
                     onToggleExpanded = { setupExpanded = !setupExpanded },

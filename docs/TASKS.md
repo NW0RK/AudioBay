@@ -278,3 +278,19 @@ Verification: assembleDebug, testDebugUnitTest (73 tests), lintDebug and four pe
 - [x] Load the private key from ignored local.properties with an environment override; verify it is absent from tracked files and document private-build limitations in BOOK_NAME_CORRECTION.md.
 - [x] Use gemini-3.5-flash-lite after live API verification showed that Google rejects 2.5 Flash-Lite for new users; verify the replacement's documented free tier and live correction of The Hobbit / J. R. R. Tolkien (.tools/book-names-smoke.log).
 - [x] Verify debug assembly, 89 passing JVM tests, lint and eight passing download-form UI tests on Samsung SM-A525F; compile the UI test APK (.tools/book-names-checks.log, .tools/book-names-device.log).
+
+## Download startup crash handling - 2026-11-01
+
+- [x] Handle libtorrent4j's wrapped LinkageError and subsequent NoClassDefFoundError as download failures, preserving the UI on first start and retry.
+- [x] Cover both native loading failures and exercise the actual injected manager, foreground service and Downloads screen on the Samsung SM-A525F with a synthetic content-free magnet; remove test queue/staging afterward.
+- [x] Verify assembleDebug, 90 JVM tests, lintDebug and the startup device test (.tools/download-crash-checks.log, .tools/download-startup-device.log); patched debug build installed.
+- [ ] Confirm the original download on the patched build. Original crash not reproduced: app absent from primary profile and device crash buffer empty. Native loading error handling is a confirmed code defect; real-service startup test passes on this phone.
+
+## Installable preview and personal API key - 2026-11-01
+
+- [x] Add masked Gemini API-key entry, replacement and removal in Settings with busy/error feedback; never restore or redisplay the credential.
+- [x] Encrypt personal credentials with Android Keystore AES-GCM in no-backup storage; update correction controls reactively and preserve manual downloads.
+- [x] Add shared-build mode that excludes private build-time credentials regardless of local/environment configuration.
+- [x] Prepare optimized v0.1.0 preview APK, release notes and SHA-256 checksum; verify APK alignment and v2/v3 signatures using the existing local development certificate.
+- [x] Verify release assembly, release lint (0 errors), all 95 JVM tests and device-test APK compilation (.tools/release-checks.log, .tools/release-final-tests.log).
+- [ ] Run the new encrypted-key persistence/removal device test and visually verify Settings; no phone connected during this release task.

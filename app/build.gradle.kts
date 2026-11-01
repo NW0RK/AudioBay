@@ -12,8 +12,13 @@ plugins {
 val privateProperties = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
-val geminiKey = providers.environmentVariable("GEMINI_API_KEY")
-    .orElse(provider { privateProperties.getProperty("GEMINI_API_KEY", "") })
+// Shared artifacts must never contain the developer's private API key.
+val geminiKey = if (providers.gradleProperty("publicBuild").orNull == "true") {
+    provider { "" }
+} else {
+    providers.environmentVariable("GEMINI_API_KEY")
+        .orElse(provider { privateProperties.getProperty("GEMINI_API_KEY", "") })
+}
 
 android {
     namespace = "com.audiobookbay.app"

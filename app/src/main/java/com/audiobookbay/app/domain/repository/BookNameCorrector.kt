@@ -7,5 +7,7 @@ data class CorrectedBookNames(val title: String?, val author: String?)
 
 interface BookNameCorrector {
     val available: Boolean
+    val availability: kotlinx.coroutines.flow.Flow<Boolean>
+        get() = kotlinx.coroutines.flow.flowOf(available)
     suspend fun correct(title: String, author: String): Resource<CorrectedBookNames>
 }

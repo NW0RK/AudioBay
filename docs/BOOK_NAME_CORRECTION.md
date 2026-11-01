@@ -20,6 +20,19 @@ The key is compiled into the APK and can be extracted. This configuration is int
 for private builds; use a backend for public distribution. Requests use the API-key
 header and a dedicated client with logging, redirects and automatic retries disabled.
 
+For shared artifacts, pass `-PpublicBuild=true` to Gradle. This forces an empty built-in
+key even when local.properties or the environment contains one. Users can add, replace
+or remove their own Gemini key under Settings → AI name correction. The password field
+is cleared after saving and never enters saved instance state. The credential is
+encrypted with an Android Keystore AES-GCM key in no-backup app storage. It is not
+shown again or logged. Removing it disables correction in shared builds; manual entry
+remains available. A personal key takes precedence over any private-build default.
+
+Saving checks the key's basic format; Google validates it when correction is used.
+Invalid/revoked keys and quota errors keep manual downloads available. Uninstalling
+the app removes the saved credential. Correction sends entered names to Google using
+the user's API project and quota.
+
 The model is `gemini-3.5-flash-lite`. Live verification on 2026-11-01 found that Google
 rejects `gemini-2.5-flash-lite` for new users and explicitly recommends this replacement.
 The replacement supports the free tier according to

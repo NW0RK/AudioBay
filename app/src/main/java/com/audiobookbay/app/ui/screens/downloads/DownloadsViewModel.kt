@@ -34,6 +34,8 @@ class DownloadsViewModel @Inject constructor(
     private val _correcting = MutableStateFlow(false)
     val correcting = _correcting.asStateFlow()
     val correctionAvailable get() = corrector.available
+    val correctionAvailability = corrector.availability
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), corrector.available)
     val correctionFailed = saved.getStateFlow("correctionFailed", false)
     val canUndoNames = saved.getStateFlow("canUndoNames", false)
     private var correctionJob: Job? = null

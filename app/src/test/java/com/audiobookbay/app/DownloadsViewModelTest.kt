@@ -26,6 +26,7 @@ class DownloadsViewModelTest {
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)
         every { corrector.available } returns false
+        every { corrector.availability } answers { flowOf(corrector.available) }
         every { manager.observeDownloads() } returns flowOf(emptyList())
         every { folders.folder } returns flowOf("content://books")
         every { network.wifiOnly } returns flowOf(false)
@@ -33,6 +34,23 @@ class DownloadsViewModelTest {
     }
     @After fun tearDown() { Dispatchers.resetMain() }
     private fun vm(saved: SavedStateHandle = SavedStateHandle()) = DownloadsViewModel(manager, storage, folders, network, repository, saved, corrector)
+
+    @Test fun correctionControlsReactToKeyAddedAndRemoved() = runTest(dispatcher) {
+        val availability = kotlinx.coroutines.flow.MutableStateFlow(false)
+        every { corrector.availability } returns availability
+        val vm = vm()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.correctionAvailability.collect { }
+        }
+        runCurrent()
+        assertFalse(vm.correctionAvailability.value)
+        availability.value = true
+        runCurrent()
+        assertTrue(vm.correctionAvailability.value)
+        availability.value = false
+        runCurrent()
+        assertFalse(vm.correctionAvailability.value)
+    }
 
     @Test fun correctionUndoAndDownloadUseDisplayedNames() = runTest(dispatcher) {
         every { corrector.available } returns true

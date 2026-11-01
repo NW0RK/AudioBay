@@ -28,16 +28,48 @@ class SettingsViewModelTest {
     private val folders = mockk<DownloadFolderSettings>()
     private val manager = mockk<TorrentDownloadManager>()
     private val network = mockk<DownloadNetworkSettings>()
+    private val keys = mockk<com.audiobookbay.app.data.storage.ApiKeySettings>()
 
     @Before fun setUp() {
         Dispatchers.setMain(dispatcher)
         every { folders.folder } returns flowOf(null)
         every { network.wifiOnly } returns flowOf(false)
+        every { keys.configured } returns kotlinx.coroutines.flow.MutableStateFlow(false)
     }
 
     @After fun tearDown() { Dispatchers.resetMain() }
 
-    private fun vm() = SettingsViewModel(folders, manager, network)
+    private fun vm() = SettingsViewModel(folders, manager, network, keys)
+
+    @Test fun saveAndRemoveKeyWithoutExposingTheCredential() = runTest(dispatcher) {
+        coEvery { keys.save(any()) } returns Unit
+        val vm = vm()
+        vm.saveApiKey("test-key")
+        assertTrue(vm.keyBusy.value)
+        runCurrent()
+        coVerify(exactly = 1) { keys.save("test-key") }
+        assertTrue(vm.keySaved.value)
+        assertFalse(vm.keyError.value)
+        assertFalse(vm.keyBusy.value)
+        vm.saveApiKey("")
+        runCurrent()
+        coVerify(exactly = 1) { keys.save("") }
+    }
+
+    @Test fun failedKeySaveCanBeRetried() = runTest(dispatcher) {
+        coEvery { keys.save(any()) } throws IllegalStateException("Storage unavailable")
+        val vm = vm()
+        vm.saveApiKey("test-key")
+        runCurrent()
+        assertTrue(vm.keyError.value)
+        assertFalse(vm.keySaved.value)
+        assertFalse(vm.keyBusy.value)
+        coEvery { keys.save(any()) } returns Unit
+        vm.saveApiKey("replacement-key")
+        runCurrent()
+        assertFalse(vm.keyError.value)
+        assertTrue(vm.keySaved.value)
+    }
 
     @Test fun togglingWifiOnlyUpdatesTheEngine() = runTest(dispatcher) {
         coEvery { manager.updateNetworkSettings(true, 0, 0) } returns Unit

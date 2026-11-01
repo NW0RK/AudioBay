@@ -584,6 +584,11 @@ class TorrentDownloadManagerImpl @Inject constructor(
         try { Result.success(lock.withLock { block() }) }
         catch (e: CancellationException) { throw e }
         catch (e: Exception) { Timber.e(e, "Torrent operation failed"); Result.failure(e) }
-        catch (e: UnsatisfiedLinkError) { Result.failure(IllegalStateException("Torrent engine is unavailable on this device", e)) }
+        // libtorrent4j wraps loadLibrary failures in LinkageError. A later attempt
+        // can instead throw NoClassDefFoundError after failed class initialization.
+        catch (e: LinkageError) {
+            Timber.e(e, "Cannot load torrent engine")
+            Result.failure(IllegalStateException("Torrent engine is unavailable on this device", e))
+        }
     }
 }

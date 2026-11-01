@@ -133,4 +133,13 @@
     <string name="correcting_book_names">Cleaning book and author names…</string>
     <string name="book_names_failed">Could not fix names. You can edit them or try again.</string>
     <string name="book_names_corrected">Names corrected. Review before downloading.</string>
+    <string name="api_key_section">AI name correction</string>
+    <string name="api_key_description">Add your Gemini API key to clean book and author names. It is encrypted on this device and excluded from backups. Using correction sends the entered names to Google and uses your API quota.</string>
+    <string name="api_key_label">Gemini API key</string>
+    <string name="api_key_configured">Your key is saved on this device.</string>
+    <string name="api_key_missing">No personal key saved.</string>
+    <string name="api_key_save">Save key</string>
+    <string name="api_key_remove">Remove key</string>
+    <string name="api_key_error">Could not save the key. Check the key and try again.</string>
+    <string name="api_key_saved">Key settings updated. The key is checked when you use name correction.</string>
 </resources>
