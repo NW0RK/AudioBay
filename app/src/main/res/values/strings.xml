@@ -203,7 +203,6 @@
     <string name="queue_error_hint">Your download queue could not be loaded. Try again.</string>
     <string name="download_progress_label">Download progress</string>
     <string name="publication_progress_label">Copying to your audiobook folder</string>
-    <string name="discovery_editorial">Your next good story.</string>
     <string name="discovery_generate">Generate picks</string>
     <string name="discovery_generating">Finding your next books…</string>
     <string name="discovery_context">Based on completed downloads. Generate sends recent titles and authors to Gemini.</string>

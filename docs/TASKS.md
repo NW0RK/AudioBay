@@ -36,3 +36,8 @@
 - [x] Generate and apply the flat ember lighthouse icon with flame inside the lantern chamber.
 - [x] Preserve installation identity, stored data, update compatibility and signing certificate.
 - [x] Verify combined changes with unit tests, lint and optimized public release build.
+
+## Compact discovery header - 0.2.4
+
+- [x] Remove the Your next good story motto and its occupied header space.
+- [x] Pass unit tests, lint and public optimized build; preserve the signing certificate and generate release checksum.

@@ -78,7 +78,6 @@ fun HomeScreen(
         CatalogSaveError(actions)
         Column(Modifier.padding(horizontal = 24.dp, vertical = 20.dp)) {
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            Text(stringResource(R.string.discovery_editorial), style = MaterialTheme.typography.headlineLarge)
         }
         PullToRefreshBox(isRefreshing = content?.isRefreshing == true, onRefresh = onRefresh) {
             LazyVerticalGrid(columns = GridCells.Fixed(2), state = grid, modifier = Modifier.fillMaxSize().testTag("discovery_grid"),
