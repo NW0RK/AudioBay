@@ -168,4 +168,14 @@
     <string name="updates_incompatible_error">This update is not compatible with this Android version or device.</string>
     <string name="updates_release_error">No usable release information was received. Try checking again later.</string>
     <string name="updates_install_error">Installation did not start. Allow AudioBay to install updates in Android settings, then tap Install update again.</string>
+    <string name="crashes_title">Crash reports</string>
+    <string name="crashes_description">Reports stay on this phone until you choose to share them. After a crash, reopen the app and visit Settings. Report to GitHub opens an issue draft for you to review and submit; GitHub issues are public. Reports contain device details and stack frames, excluding exception messages and download details. Native crash details depend on Android availability. Up to five reports are kept.</string>
+    <string name="crashes_empty">No saved crash reports.</string>
+    <string name="crashes_view">View report %1$d</string>
+    <string name="crashes_report">Report to GitHub</string>
+    <string name="crashes_copy">Copy reports</string>
+    <string name="crashes_delete">Delete saved reports</string>
+    <string name="crashes_refresh">Refresh reports</string>
+    <string name="crashes_copied">Full reports copied. You can paste them into your GitHub issue.</string>
+    <string name="crashes_error">Could not read reports or open GitHub. Try again or copy your reports.</string>
 </resources>

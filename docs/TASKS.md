@@ -310,3 +310,10 @@ Verification: assembleDebug, testDebugUnitTest (73 tests), lintDebug and four pe
 
 - [x] Accept dotted Gemini credentials (including AQ. format) unchanged; cover clipboard cleanup and rejection of embedded spaces, labels and invisible characters.
 - [x] Prepare public 0.1.2/code 3 with unchanged signing certificate; verify 116 release tests, assembly, lint, alignment, v2/v3 signatures and private-key exclusion. Make updater repository tests independent of the current app version.
+
+## Manual crash reporting - 2026-11-01
+
+- [x] Save up to five sanitized crash reports in private no-backup phone storage; preserve Android default exception handling.
+- [x] Collect Android 11+ historical crash/native crash/ANR exit information on opening Settings; native frames are best effort and omit private paths.
+- [x] Add Settings report preview, copy, delete, refresh and manual GitHub issue draft; explain public visibility and require user submission.
+- [x] Verify 119 release unit tests, isolated real-phone persistence/handler delegation test, release lint (0 errors), public release assembly, existing certificate, APK alignment and credential exclusion.

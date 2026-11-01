@@ -57,6 +57,7 @@ fun SettingsScreen() {
                 onChange = { apiKey = it }, onSave = { vm.saveApiKey(apiKey) },
                 onRemove = { vm.saveApiKey("") })
             AppUpdateSettings()
+            CrashReportSettings()
             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.large) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.about_downloads))
             Text(stringResource(R.string.external_player_hint))
