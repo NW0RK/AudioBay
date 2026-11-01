@@ -341,3 +341,15 @@ Verification: assembleDebug, testDebugUnitTest (73 tests), lintDebug and four pe
 - [x] Prepare official 0.1.6 with the existing certificate, public-build credential exclusion, APK alignment/signature checks and SHA-256 checksum.
 
 Device-test caution: Gradle connected-device test cleanup reinstalled the app on the personal S25 and cleared app data. Do not run connectedDebugAndroidTest on a personal device again; use an isolated test app/device or direct adb install -r and instrumentation without automatic uninstall cleanup. User explicitly declined restoring old downloads.
+
+## Warm literary downloader redesign — 2026-11-01
+
+- [x] Replace coral/plum styling with complete ink/amber light and dark schemes, fixed tones, semantic download colors, and theme-aware glass surfaces. Keep dark mode and disabled dynamic color as defaults.
+- [x] Bundle Lora with its OFL license; define all typography roles with three weights and 120% title / 150% body line spacing.
+- [x] Share stateless cover and row cards across Home, Search, Categories and Saved, with screen-level Saved/download subscriptions, download-setup shortcuts, and publication-aware progress.
+- [x] Add featured/recent shelves, category tiles and repository-backed category results with cancellation, pagination and retry.
+- [x] Add structured empty/error states, Saved grid/list and sorting controls with saved-state restoration, and queue/Saved-load retry actions.
+- [x] Retain the floating navigation pill and tab order, centrally consume measured navigation/system insets, and add calm press/state/progress feedback plus a bounded nested-scroll detail cover.
+- [x] Add unit tests for sorting, category state, status mapping, contrast and typography; add UI tests for actions, restoration, Home reset, cover collapse and offline visual fixtures.
+- [ ] Complete debug/release build, unit tests, lint and device/visual verification; record results below.
+- [ ] Commit and push the redesign. APK signing and GitHub release publication are deferred to the other machine at the user's request.

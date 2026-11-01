@@ -32,7 +32,18 @@ class HomeViewModel @Inject constructor(
     private var failedPage = 1
     private var request: Job? = null
 
-    init { refresh() }
+    private val _categories = MutableStateFlow<List<com.audiobookbay.app.domain.model.Category>>(emptyList())
+    val categories = _categories.asStateFlow()
+    init {
+        refresh()
+        viewModelScope.launch {
+            try {
+                val result = repository.getCategories()
+                if (result is Resource.Success) _categories.value = result.data
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { timber.log.Timber.w(e, "Categories unavailable") }
+        }
+    }
 
     fun refresh() {
         request?.cancel()

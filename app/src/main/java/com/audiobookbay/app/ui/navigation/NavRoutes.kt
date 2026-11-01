@@ -14,7 +14,7 @@ sealed interface NavRoute {
     data object Search : NavRoute
 
     @Serializable
-    data object Categories : NavRoute
+    data class Categories(val slug: String? = null) : NavRoute
 
     @Serializable
     data class AudiobookDetail(val audiobookId: String) : NavRoute

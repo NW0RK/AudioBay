@@ -182,4 +182,24 @@
     <string name="crashes_export">Export diagnostic file</string>
     <string name="crashes_export_description">No computer or debugging required. After the failure, reopen the app and export a diagnostic file, then attach it to your GitHub issue. Includes recent torrent events, device details, saved exit reports and permitted app log summaries. Android restricts full system logs. Raw log messages, book details and credentials are excluded.</string>
     <string name="crashes_exported">Diagnostic file saved. Review it and attach it to your GitHub issue manually.</string>
+    <string name="recently_added">Recently added</string>
+    <string name="browse_all">Browse all</string>
+    <string name="browse_audiobooks">Browse audiobooks</string>
+    <string name="catalog_error_hint">Check your connection and try again.</string>
+    <string name="catalog_empty_hint">There are no books here yet. Refresh to check for new arrivals.</string>
+    <string name="category_empty_hint">Try another category to find your next book.</string>
+    <string name="search_empty_hint">Try a different title or author, or clear your search.</string>
+    <string name="download_empty_hint">Find a book and choose Download to save it for your favorite listening app.</string>
+    <string name="saved_empty_hint">Keep books here while you decide what to download next.</string>
+    <string name="saved_sort">Sort saved books</string>
+    <string name="sort_recent">Recently saved</string>
+    <string name="sort_title">Title</string>
+    <string name="sort_author">Author</string>
+    <string name="layout_grid">Grid view</string>
+    <string name="layout_list">List view</string>
+    <string name="prepare_book_download">Prepare download for %1$s</string>
+    <string name="view_book_download">View download for %1$s</string>
+    <string name="queue_error_hint">Your download queue could not be loaded. Try again.</string>
+    <string name="download_progress_label">Download progress</string>
+    <string name="publication_progress_label">Copying to your audiobook folder</string>
 </resources>

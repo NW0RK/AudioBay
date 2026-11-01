@@ -20,7 +20,7 @@ class HomeViewModelTest {
     private fun book(id: String) = Audiobook(id, "Book $id", "Author")
     private fun HomeViewModel.content() = (uiState.value as UiState.Success).data
 
-    @Before fun setUp() { Dispatchers.setMain(dispatcher) }
+    @Before fun setUp() { Dispatchers.setMain(dispatcher); coEvery { repository.getCategories() } returns Resource.Success(emptyList()) }
     @After fun tearDown() { Dispatchers.resetMain() }
 
     @Test fun `initial request displays books`() = runTest(dispatcher) {

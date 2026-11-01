@@ -30,7 +30,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DownloadsScreen() {
+fun DownloadsScreen(onBrowse: () -> Unit = {}) {
     val vm: DownloadsViewModel = hiltViewModel()
     val state by vm.uiState.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
@@ -64,7 +64,7 @@ fun DownloadsScreen() {
     LaunchedEffect(error) { if (error != null) setupExpanded = true }
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(R.string.nav_downloads)) })
-        LazyColumn(state = grid, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 128.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        LazyColumn(state = grid, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 DownloadSetupForm(
                     state = DownloadSetupState(
@@ -92,17 +92,17 @@ fun DownloadsScreen() {
             item { com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.download_queue)) }
             when (val result = state) {
                 UiState.Idle, UiState.Loading -> item { CircularProgressIndicator() }
-                is UiState.Error -> item { Text(stringResource(R.string.download_queue_error)) }
+                is UiState.Error -> item { com.audiobookbay.app.ui.components.MessageState(stringResource(R.string.download_queue_error), stringResource(R.string.queue_error_hint), stringResource(R.string.retry), vm::retryQueue, error = true) }
                 is UiState.Success -> {
-                    if (result.data.isEmpty()) item { Text(stringResource(R.string.no_downloads)) }
+                    if (result.data.isEmpty()) item { com.audiobookbay.app.ui.components.MessageState(stringResource(R.string.no_downloads), stringResource(R.string.download_empty_hint), stringResource(R.string.browse_audiobooks), onBrowse) }
                     items(result.data, key = { it.id }) { download ->
                         GlassPanel(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(download.title, style = MaterialTheme.typography.titleLarge)
                                 download.author?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                                com.audiobookbay.app.ui.components.StatusBadge(stringResource(statusLabel(download.status)), download.status in setOf(DownloadStatus.ERROR, DownloadStatus.PUBLICATION_FAILED))
+                                com.audiobookbay.app.ui.components.DownloadStatusBadge(download.status)
                                 val publishing = download.status in setOf(DownloadStatus.PUBLISHING, DownloadStatus.PUBLICATION_FAILED)
-                                LinearProgressIndicator(progress = { (if (publishing) download.publicationProgress else download.progress).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(MaterialTheme.shapes.small))
+                                com.audiobookbay.app.ui.components.DownloadProgress(download)
                                 if (publishing) Text(stringResource(R.string.publication_stats, (download.publicationProgress * 100).toInt()))
                                 else Text(stringResource(R.string.download_stats, (download.progress * 100).toInt(), String.format(Locale.getDefault(), "%.1f", download.downloadSpeedBytesPerSec / 1024.0), download.peers))
                                 if (download.status == DownloadStatus.DOWNLOADING) {
@@ -181,7 +181,7 @@ fun DownloadsScreen() {
     }
 }
 
-private fun statusLabel(status: DownloadStatus): Int = when (status) {
+internal fun statusLabel(status: DownloadStatus): Int = when (status) {
     DownloadStatus.QUEUED -> R.string.download_queued
     DownloadStatus.CHECKING -> R.string.download_checking
     DownloadStatus.DOWNLOADING -> R.string.download_downloading

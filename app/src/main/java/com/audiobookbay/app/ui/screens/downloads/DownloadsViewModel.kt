@@ -111,11 +111,17 @@ class DownloadsViewModel @Inject constructor(
     fun setMagnet(value: String) { namesEdited(); saved["magnet"] = value }
     fun folderLabel(uri: String?) = folders.display(uri)
 
-    init {
-        viewModelScope.launch {
+    private var observation: Job? = null
+    fun retryQueue() {
+        observation?.cancel()
+        _uiState.value = UiState.Loading
+        observation = viewModelScope.launch {
             manager.observeDownloads().catch { _uiState.value = UiState.Error(it.message.orEmpty()) }
                 .collect { _uiState.value = UiState.Success(it) }
         }
+    }
+    init {
+        retryQueue()
         saved.get<String>("audiobookId")?.let { id -> viewModelScope.launch {
             when (val result = repository.getAudiobookDetail(id)) {
                 is Resource.Success -> {

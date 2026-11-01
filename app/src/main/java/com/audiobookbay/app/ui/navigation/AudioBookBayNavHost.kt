@@ -53,11 +53,13 @@ fun AudioBookBayNavHost() {
         NavHost(
             navController = navController,
             startDestination = NavRoute.Home,
-            modifier = Modifier.padding(top = innerPadding.calculateTopPadding()),
+            modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
         ) {
             composable<NavRoute.Home> {
                 HomeScreen(
                     resetToken = homeResetToken,
+                    onCategory = { navController.navigate(NavRoute.Categories(it)) },
+                    onDownload = { navController.navigate(NavRoute.Downloads(it)) },
                     onNavigateToDetail = { id ->
                         navController.navigate(NavRoute.AudiobookDetail(id))
                     },
@@ -65,6 +67,8 @@ fun AudioBookBayNavHost() {
             }
             composable<NavRoute.Search> {
                 SearchScreen(
+                    onBrowse = { navController.navigateToTab(NavRoute.Home) },
+                    onDownload = { navController.navigate(NavRoute.Downloads(it)) },
                     onNavigateToDetail = { id ->
                         navController.navigate(NavRoute.AudiobookDetail(id))
                     },
@@ -72,6 +76,8 @@ fun AudioBookBayNavHost() {
             }
             composable<NavRoute.Categories> {
                 CategoriesScreen(
+                    onBack = { navController.popBackStack() },
+                    onDownload = { navController.navigate(NavRoute.Downloads(it)) },
                     onNavigateToDetail = { id ->
                         navController.navigate(NavRoute.AudiobookDetail(id))
                     },
@@ -84,10 +90,14 @@ fun AudioBookBayNavHost() {
                 )
             }
             composable<NavRoute.Downloads> {
-                DownloadsScreen()
+                DownloadsScreen(onBrowse = { navController.navigateToTab(NavRoute.Home) })
             }
             composable<NavRoute.Saved> {
-                com.audiobookbay.app.ui.screens.saved.SavedScreen { id -> navController.navigate(NavRoute.AudiobookDetail(id)) }
+                com.audiobookbay.app.ui.screens.saved.SavedScreen(
+                    onBrowse = { navController.navigateToTab(NavRoute.Home) },
+                    onDownload = { navController.navigate(NavRoute.Downloads(it)) },
+                    onNavigateToDetail = { navController.navigate(NavRoute.AudiobookDetail(it)) },
+                )
             }
             composable<NavRoute.Settings> {
                 SettingsScreen()

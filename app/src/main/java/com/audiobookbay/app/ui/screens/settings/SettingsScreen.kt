@@ -34,7 +34,7 @@ fun SettingsScreen() {
     LaunchedEffect(keySaved) { if (keySaved) apiKey = "" }
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(R.string.nav_settings)) })
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp).padding(bottom = 112.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             GlassPanel(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.storage_section))
             DownloadFolderPicker(vm.label(folder), folder != null, !busy, vm::select)

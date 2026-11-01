@@ -14,7 +14,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.audiobookbay.app.R
 import com.audiobookbay.app.domain.model.*
-import com.audiobookbay.app.ui.screens.home.AudiobookCard
+import com.audiobookbay.app.ui.components.*
+import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.ViewList
 @Composable
 fun SaveBookControl(book: Audiobook, vm: SavedViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -34,29 +38,69 @@ fun SaveBookControl(book: Audiobook, vm: SavedViewModel = hiltViewModel()) {
 }
 @Composable
 fun BookSummaryMetadata(book: Audiobook) {
-    val summary = listOfNotNull(book.language, book.audioFormat, book.formattedSize).filter { it.isNotBlank() }.joinToString(" · ")
+    val summary = listOfNotNull(book.language, book.audioFormat, book.formattedSize).filter { it.isNotBlank() }.joinToString(" ï¿½ ")
     if (summary.isNotEmpty()) Text(summary, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 }
+enum class SavedSort { Recent, Title, Author }
+fun sortSavedBooks(books: List<Audiobook>, sort: SavedSort): List<Audiobook> = when (sort) {
+    SavedSort.Recent -> books
+    SavedSort.Title -> books.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+    SavedSort.Author -> books.sortedWith(compareBy<Audiobook, String>(String.CASE_INSENSITIVE_ORDER) { it.author }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+}
 @Composable
-fun SavedScreen(onNavigateToDetail: (String) -> Unit) {
+fun SavedScreen(onBrowse: () -> Unit = {}, onDownload: (String?) -> Unit = {}, onNavigateToDetail: (String) -> Unit) {
     val vm: SavedViewModel = hiltViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
+    val actions = rememberCatalogActions(savedVm = vm)
+    SavedContent(state, vm::retryLoad, onBrowse, actions, onDownload, onNavigateToDetail)
+}
+@Composable
+fun SavedContent(state: UiState<List<Audiobook>>, onRetry: () -> Unit, onBrowse: () -> Unit,
+    actions: CatalogActions? = null, onDownload: (String?) -> Unit = {}, onNavigateToDetail: (String) -> Unit = {}) {
+    var grid by rememberSaveable { mutableStateOf(true) }
+    var sort by rememberSaveable { mutableStateOf(SavedSort.Recent) }
+    var sortMenu by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Text(stringResource(R.string.nav_saved), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(vertical = 16.dp))
-        when (val result = state) {
-            UiState.Idle, UiState.Loading -> CircularProgressIndicator()
-            is UiState.Error -> {
-                Text(stringResource(R.string.saved_load_error))
-                Button(onClick = vm::retryLoad) { Text(stringResource(R.string.retry)) }
-            }
-            is UiState.Success -> {
-                if (result.data.isEmpty()) Text(stringResource(R.string.saved_empty))
-                LazyColumn(contentPadding = PaddingValues(bottom = 128.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(result.data, key = { "${it.source}:${it.id}" }) { book ->
-                        AudiobookCard(book) { onNavigateToDetail(book.id) }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Box {
+                TextButton(onClick = { sortMenu = true }) {
+                    Text(stringResource(when (sort) { SavedSort.Recent -> R.string.sort_recent; SavedSort.Title -> R.string.sort_title; SavedSort.Author -> R.string.sort_author }))
+                }
+                DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                    SavedSort.entries.forEach { option ->
+                        DropdownMenuItem(text = { Text(stringResource(when (option) { SavedSort.Recent -> R.string.sort_recent; SavedSort.Title -> R.string.sort_title; SavedSort.Author -> R.string.sort_author })) },
+                            onClick = { sort = option; sortMenu = false })
                     }
                 }
             }
+            Row {
+                IconToggleButton(checked = grid, onCheckedChange = { grid = true }) { Icon(Icons.Default.GridView, stringResource(R.string.layout_grid)) }
+                IconToggleButton(checked = !grid, onCheckedChange = { grid = false }) { Icon(Icons.Default.ViewList, stringResource(R.string.layout_list)) }
+            }
+        }
+        StateContent(state, Modifier.weight(1f)) { result ->
+        Column(Modifier.fillMaxSize()) {
+        when (result) {
+            UiState.Idle, UiState.Loading -> LinearProgressIndicator(Modifier.fillMaxWidth())
+            is UiState.Error -> MessageState(stringResource(R.string.saved_load_error), stringResource(R.string.catalog_error_hint), stringResource(R.string.retry), onRetry, error = true, scrollable = true)
+            is UiState.Success -> {
+                if (result.data.isEmpty()) {
+                    MessageState(stringResource(R.string.saved_empty), stringResource(R.string.saved_empty_hint), stringResource(R.string.browse_audiobooks), onBrowse, scrollable = true)
+                } else {
+                    val books = remember(result.data, sort) { sortSavedBooks(result.data, sort) }
+                    LazyVerticalGrid(columns = if (grid) GridCells.Adaptive(156.dp) else GridCells.Fixed(1),
+                        contentPadding = PaddingValues(bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        items(books, key = { it.source.toString() + ":" + it.id }) { book ->
+                            val card = actions?.state(book) ?: BookCardState()
+                            AudiobookCard(book, compact = !grid, state = card, onSave = { actions?.toggle(book) },
+                                onDownload = { onDownload(if (card.download == null) book.id else null) }, onClick = { onNavigateToDetail(book.id) })
+                        }
+                    }
+                }
+            }
+        }
+        }
         }
     }
 }

@@ -20,7 +20,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 
-/** A translucent highlight and a fine rim keep panels light against the plum canvas. */
+/** A translucent highlight and a fine rim keep panels light against the ink or parchment canvas. */
 @Composable
 fun GlassPanel(
     modifier: Modifier = Modifier,
@@ -28,8 +28,8 @@ fun GlassPanel(
     content: @Composable () -> Unit,
 ) {
     Box(modifier.clip(shape).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.96f))
-        .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.09f), Color.White.copy(alpha = 0.015f))))
-        .border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.2f), Color.White.copy(alpha = 0.035f))), shape)) {
+        .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.015f))))
+        .border(1.dp, Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.035f))), shape)) {
         content()
     }
 }
@@ -55,8 +55,8 @@ fun GlassActionButton(
             MaterialTheme.colorScheme.primary.copy(alpha = if (subtleArtwork) 0.12f else 0.42f),
             MaterialTheme.colorScheme.surface.copy(alpha = if (subtleArtwork) 0.58f else 0.82f),
         ))))
-        Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.18f), Color.Transparent)))
-            .border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.5f), Color.White.copy(alpha = 0.06f))), CircleShape))
+        Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f), Color.Transparent)))
+            .border(1.dp, Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))), CircleShape))
         Icon(icon, label, Modifier.size(32.dp), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
     }
 }
