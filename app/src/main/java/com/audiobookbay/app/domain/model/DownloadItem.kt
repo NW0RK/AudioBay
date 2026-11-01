@@ -41,6 +41,7 @@ enum class DownloadStatus {
     SEEDING,
     ERROR,
     CANCELLED,
+    WAITING_FOR_WIFI,
 }
 
 @Serializable

@@ -2,6 +2,7 @@ package com.audiobookbay.app
 
 import androidx.lifecycle.SavedStateHandle
 import com.audiobookbay.app.data.storage.DownloadFolderSettings
+import com.audiobookbay.app.data.storage.DownloadNetworkSettings
 import com.audiobookbay.app.domain.model.*
 import com.audiobookbay.app.domain.repository.*
 import com.audiobookbay.app.torrent.DownloadStorage
@@ -19,15 +20,17 @@ class DownloadsViewModelTest {
     private val manager = mockk<TorrentDownloadManager>()
     private val storage = mockk<DownloadStorage>()
     private val folders = mockk<DownloadFolderSettings>()
+    private val network = mockk<DownloadNetworkSettings>()
     private val repository = mockk<AudiobookRepository>()
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)
         every { manager.observeDownloads() } returns flowOf(emptyList())
         every { folders.folder } returns flowOf("content://books")
+        every { network.wifiOnly } returns flowOf(false)
         coEvery { folders.validate(any()) } returns Unit
     }
     @After fun tearDown() { Dispatchers.resetMain() }
-    private fun vm() = DownloadsViewModel(manager, storage, folders, repository, SavedStateHandle())
+    private fun vm() = DownloadsViewModel(manager, storage, folders, network, repository, SavedStateHandle())
     @Test fun viewingQueueDoesNotStartNativeEngine() = runTest(dispatcher) {
         val vm = vm(); runCurrent()
         assertEquals(UiState.Success(emptyList<DownloadItem>()), vm.uiState.value)
@@ -65,7 +68,7 @@ class DownloadsViewModelTest {
             Resource.Success(AudiobookDetail("catalog-book", "Book Title", "Catalog Author",
                 torrentInfo = TorrentInfo("hash", "magnet:?xt=test")))
         }
-        val vm = DownloadsViewModel(manager, storage, folders, repository, SavedStateHandle(mapOf("audiobookId" to "catalog-book")))
+        val vm = DownloadsViewModel(manager, storage, folders, network, repository, SavedStateHandle(mapOf("audiobookId" to "catalog-book")))
         vm.setAuthor("Corrected Author")
         advanceUntilIdle()
         assertEquals("Corrected Author", vm.author.value)
@@ -74,7 +77,7 @@ class DownloadsViewModelTest {
     }
     @Test fun unknownCatalogAuthorStillRequiresUserInput() = runTest(dispatcher) {
         coEvery { repository.getAudiobookDetail("catalog-book") } returns Resource.Success(AudiobookDetail("catalog-book", "Book Title", "Unknown Author"))
-        val vm = DownloadsViewModel(manager, storage, folders, repository, SavedStateHandle(mapOf("audiobookId" to "catalog-book")))
+        val vm = DownloadsViewModel(manager, storage, folders, network, repository, SavedStateHandle(mapOf("audiobookId" to "catalog-book")))
         runCurrent()
         assertEquals("", vm.author.value)
         assertEquals("Book Title", vm.title.value)

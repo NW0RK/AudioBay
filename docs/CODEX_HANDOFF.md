@@ -88,8 +88,9 @@ testing. Wake it before UI work; it sleeps quickly. Its main Android user is 0.
 
 ## Remaining work beyond this request
 
-Public DHT/tracker reliability, Android15 timeout on an API35 phone, Wi-Fi-only
-constraints, richer selective-file UI, and release signing/minification checks remain.
+Public DHT/tracker reliability, Android15 timeout on an API35 phone, and release
+signing/minification checks remain. Wi-Fi-only enforcement and the selective-track UI
+are implemented; see the section below for what was and was not device-verified.
 Native ABIs currently include arm64 and downloads require API28; browsing minSdk is26.
 No playback work should be reintroduced. The Android folder grant is mandatory and
 cannot be silently manufactured. Files in shared storage remain after app uninstall.
@@ -111,3 +112,32 @@ was installed on the phone; capitalized Witcher returned a matching catalog list
 and The Last Wish returned multiple Andrzej Sapkowski listings. UI verification XML
 is in .tools/searchfix-witcher.xml and .tools/searchfix-lastwish.xml. No downloads
 were started while verifying these catalog results.
+
+## Wi-Fi-only downloads and selective tracks — 2026-11-01
+
+Settings now has a persisted "Download over Wi-Fi only" switch. The preference lives in
+the existing DataStore and is applied by the torrent manager, not only by the screen.
+When enabled, transfers on a metered or unavailable connection are paused and stored as
+WAITING_FOR_WIFI; the engine keeps a dataSync service running so its two-second poll can
+resume them as soon as an unmetered network returns. Shared-folder publication and
+completed books are never paused because they do not use the network. Turning the switch
+off resumes waiting transfers immediately. A manual Resume on a waiting item re-checks
+the policy, so it cannot silently consume mobile data. Notification text reports that
+transfers are waiting for Wi-Fi.
+
+Downloads cards show a localized ETA derived from the native rate. Per-download "Files"
+opens an audio-track checklist once metadata is available. Non-audio files are skipped,
+at least one audio track must stay selected, and the chosen set is persisted in the
+private SavedTorrent state (optional field, backwards compatible; Room schema unchanged).
+If the native session is gone, the selection is stored and applied on the next prepare.
+
+Verification: assembly, test assembly, lint and 64 JVM unit tests passed
+(.tools/wifi-selective-final-checks.log, .tools/wifi-selective-unit-tests.log). The three
+Android-device tests passed again on the real configured SAF folder
+(.tools/wifi-selective-device-tests.log). The final APKs were installed on the phone.
+
+Not verified on hardware: physically toggling Wi-Fi/mobile data to observe the OS
+connectivity transition, because that would disrupt the test phone. The policy decision,
+preference persistence, selection validation and the unchanged transfer/publish path are
+covered by unit and device tests. Android 15 `onTimeout` on an API35 device, public
+DHT/tracker reachability and release minification/signing still need separate checks.

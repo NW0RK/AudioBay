@@ -2,6 +2,7 @@ package com.audiobookbay.app.torrent
 
 import com.audiobookbay.app.data.storage.BookPublisher
 import com.audiobookbay.app.data.storage.BookFolders
+import com.audiobookbay.app.data.storage.DownloadNetworkSettings
 import com.audiobookbay.app.data.storage.PublicationFile
 import android.content.Context
 import android.os.Build
@@ -32,7 +33,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Serializable
-private data class SavedTorrent(val item: DownloadItem, val magnet: String? = null, val torrentPath: String? = null, val selected: List<Int>? = null, val verifiedFiles: List<PublicationFile>? = null)
+private data class SavedTorrent(
+    val item: DownloadItem,
+    val magnet: String? = null,
+    val torrentPath: String? = null,
+    val selected: List<Int>? = null,
+    val files: List<TorrentFile>? = null,
+    val verifiedFiles: List<PublicationFile>? = null,
+)
 
 /** Owns native objects on IO threads; Room is the persistent download view. */
 @Singleton
@@ -41,11 +49,14 @@ class TorrentDownloadManagerImpl @Inject constructor(
     private val dao: DownloadDao,
     private val json: Json,
     private val publisher: BookPublisher,
+    private val networkSettings: DownloadNetworkSettings,
+    private val networkStatus: NetworkStatus,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : TorrentDownloadManager {
     private val scope = CoroutineScope(SupervisorJob() + io)
     private val lock = Mutex()
     @Volatile private var session: SessionManager? = null
+    @Volatile private var wifiOnly = false
     private var loaded = false
     private val publications = java.util.concurrent.ConcurrentHashMap<String, Job>()
     private val runtimeItems = MutableStateFlow<Map<String, DownloadItem?>>(emptyMap())
@@ -54,6 +65,20 @@ class TorrentDownloadManagerImpl @Inject constructor(
     private val prepared = mutableSetOf<String>()
     private val pendingSaves = java.util.concurrent.ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private val stateDir get() = File(context.filesDir, "torrent-state").apply { mkdirs() }
+
+    init {
+        // A settings change must take effect immediately, even while the app is not on screen.
+        scope.launch {
+            networkSettings.wifiOnly
+                .catch { Timber.w(it, "Cannot observe Wi-Fi-only setting") }
+                .collect { enabled ->
+                    lock.withLock {
+                        wifiOnly = enabled
+                        enforceNetworkPolicyLocked()
+                    }
+                }
+        }
+    }
 
     private val listener = object : AlertListener {
         override fun types(): IntArray? = null
@@ -96,6 +121,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
 
     private suspend fun initializeLocked() {
         loadRecordsLocked()
+        wifiOnly = networkSettings.wifiOnly.first()
         if (session != null) return
         check(Build.VERSION.SDK_INT >= 28) { "Torrent downloads require Android 9 or newer" }
         val native = SessionManager()
@@ -114,6 +140,9 @@ class TorrentDownloadManagerImpl @Inject constructor(
                     delay(2000)
                     tick++
                     lock.withLock {
+                        try { enforceNetworkPolicyLocked() }
+                        catch (e: CancellationException) { throw e }
+                        catch (e: Exception) { Timber.e(e, "Cannot apply Wi-Fi-only policy") }
                         records.keys.toList().forEach { hash ->
                             try { updateProgress(hash, tick % 15 == 0) }
                             catch (e: CancellationException) { throw e }
@@ -133,7 +162,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
 
     internal suspend fun shutdownIfIdle() = withContext(io) {
         lock.withLock {
-            if (records.values.none { it.item.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING, DownloadStatus.PUBLISHING) }) shutdownLocked()
+            if (records.values.none { it.item.status in ACTIVE_STATUSES }) shutdownLocked()
         }
     }
 
@@ -148,7 +177,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
         try {
             native.pause()
             records.values.toList().forEach { saved ->
-                if (saved.item.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING, DownloadStatus.PUBLISHING)) {
+                if (saved.item.status in ACTIVE_STATUSES) {
                     persist(saved.copy(item = saved.item.copy(status = DownloadStatus.PAUSED, downloadSpeedBytesPerSec = 0, uploadSpeedBytesPerSec = 0)))
                 }
             }
@@ -200,6 +229,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
             persist(saved)
             TorrentDownloadService.start(context)
             addNative(saved)
+            enforceNetworkPolicyLocked()
         } catch (e: Exception) { fail(saved.item.infoHash, e); throw e }
         return saved.item
     }
@@ -259,6 +289,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
             handle.resume()
         } else addNative(saved)
         persist(saved.copy(item = saved.item.copy(status = DownloadStatus.QUEUED, errorMessage = null)))
+        enforceNetworkPolicyLocked()
     }
 
     override suspend fun cancelDownload(infoHash: String, deleteFiles: Boolean): Result<Unit> = operation {
@@ -298,32 +329,99 @@ class TorrentDownloadManagerImpl @Inject constructor(
 
     private fun visibleState(item: DownloadItem): DownloadItem = when {
         item.status == DownloadStatus.PUBLISHING && !runtimeItems.value.containsKey(item.infoHash) -> item.copy(status = DownloadStatus.PUBLICATION_FAILED)
-        session == null && item.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING) ->
+        session == null && item.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING, DownloadStatus.WAITING_FOR_WIFI) ->
             item.copy(status = DownloadStatus.PAUSED, downloadSpeedBytesPerSec = 0, uploadSpeedBytesPerSec = 0)
         else -> item
     }
 
-    override suspend fun setFilePriorities(infoHash: String, filePriorities: Map<Int, Boolean>): Result<Unit> = operation {
+    override suspend fun listFiles(infoHash: String): Result<List<TorrentFile>> = operation {
+        loadRecordsLocked()
         val saved = records[infoHash] ?: error("Download not found")
-        val handle = session?.find(Sha1Hash.parseHex(infoHash)) ?: error("Torrent not ready")
-        val info = handle.torrentFile() ?: error("Metadata not ready")
-        val current = saved.selected?.toMutableSet() ?: validate(info, File(saved.item.destinationPath), null).toMutableSet()
-        require(filePriorities.keys.all { it in 0 until info.numFiles() }) { "Invalid file index" }
-        filePriorities.forEach { (index, selected) -> if (selected) current.add(index) else current.remove(index) }
-        val selected = validate(info, File(saved.item.destinationPath), current.toList())
-        handle.prioritizeFiles(Array(info.numFiles()) { if (it in selected) Priority.DEFAULT else Priority.IGNORE })
-        persist(saved.copy(selected = selected.toList()))
-        saveResume(infoHash, handle)
+        saved.files?.let { return@operation it }
+        val info = metadataFor(saved) ?: error("Torrent metadata is not ready yet")
+        val selected = validate(info, File(saved.item.destinationPath), saved.selected)
+        describe(info, selected).also { files -> persist(saved.copy(selected = selected.toList(), files = files)) }
     }
 
+    override suspend fun setFilePriorities(infoHash: String, filePriorities: Map<Int, Boolean>): Result<Unit> = operation {
+        loadRecordsLocked()
+        val saved = records[infoHash] ?: error("Download not found")
+        val known = saved.files ?: metadataFor(saved)?.let { info ->
+            val selected = validate(info, File(saved.item.destinationPath), saved.selected)
+            describe(info, selected).also { files -> persist(saved.copy(selected = selected.toList(), files = files)) }
+        } ?: error("Torrent metadata is not ready yet")
+        val updated = FileSelectionPolicy.apply(known, filePriorities)
+        val selected = updated.filter { it.isSelectedForDownload }.map { it.index }.toSet()
+        val current = records[infoHash] ?: saved
+        persist(current.copy(selected = selected.sorted(), files = updated))
+        val handle = session?.find(Sha1Hash.parseHex(infoHash))?.takeIf { it.isValid }
+        val info = handle?.torrentFile()
+        if (handle != null && info != null) {
+            val valid = validate(info, File(current.item.destinationPath), selected.toList())
+            handle.prioritizeFiles(Array(info.numFiles()) { if (it in valid) Priority.DEFAULT else Priority.IGNORE })
+            saveResume(infoHash, handle)
+        }
+    }
+
+    /** Reads metadata from the live session when possible, otherwise from the stored .torrent. */
+    private fun metadataFor(saved: SavedTorrent): NativeTorrentInfo? =
+        session?.find(Sha1Hash.parseHex(saved.item.infoHash))?.takeIf { it.isValid }?.torrentFile()
+            ?: saved.torrentPath?.let { path -> runCatching { NativeTorrentInfo(File(path)) }.getOrNull() }
+
+    private fun describe(info: NativeTorrentInfo, selected: Set<Int>): List<TorrentFile> =
+        (0 until info.numFiles()).map { index ->
+            val path = info.files().filePath(index)
+            TorrentFile(index, path, info.files().fileSize(index), TorrentFiles.isAudio(path), index in selected)
+        }
+
     override suspend fun updateNetworkSettings(wifiOnly: Boolean, maxDownloadSpeedBytes: Long, maxUploadSpeedBytes: Long): Unit = withContext(io) {
+        require(maxDownloadSpeedBytes >= 0 && maxUploadSpeedBytes >= 0)
         lock.withLock {
-            require(!wifiOnly) { "Wi-Fi-only downloads are not available yet" }
-            require(maxDownloadSpeedBytes >= 0 && maxUploadSpeedBytes >= 0)
-            initializeLocked()
+            // Persist first so enforcement on a later process start honours the new choice.
+            this@TorrentDownloadManagerImpl.wifiOnly = wifiOnly
+            networkSettings.setWifiOnly(wifiOnly)
             session?.applySettings(SettingsPack().downloadRateLimit(maxDownloadSpeedBytes.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
                 .uploadRateLimit(maxUploadSpeedBytes.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()))
+            enforceNetworkPolicyLocked()
         }
+    }
+
+    /**
+     * Pauses torrent transfers while Wi-Fi-only is enabled on a metered or unavailable connection,
+     * and resumes the ones that were waiting once an unmetered connection is back. Shared-folder
+     * publication and already completed downloads are untouched because they use no network.
+     */
+    private suspend fun enforceNetworkPolicyLocked() {
+        val native = session ?: return
+        if (!wifiOnly || networkStatus.isUnmetered()) {
+            records.values.toList()
+                .filter { it.item.status == DownloadStatus.WAITING_FOR_WIFI }
+                .forEach { saved ->
+                    val hash = saved.item.infoHash
+                    val handle = native.find(Sha1Hash.parseHex(hash))?.takeIf { it.isValid }
+                    if (handle != null) {
+                        handle.unsetFlags(TorrentFlags.AUTO_MANAGED)
+                        handle.resume()
+                    } else {
+                        addNative(saved.copy(item = saved.item.copy(status = DownloadStatus.QUEUED)))
+                    }
+                    persist(saved.copy(item = saved.item.copy(status = DownloadStatus.QUEUED, errorMessage = null)))
+                }
+            return
+        }
+        records.values.toList()
+            .filter { it.item.status in TRANSFER_STATUSES }
+            .forEach { saved ->
+                val hash = saved.item.infoHash
+                val handle = native.find(Sha1Hash.parseHex(hash))?.takeIf { it.isValid }
+                handle?.unsetFlags(TorrentFlags.AUTO_MANAGED)
+                handle?.pause()
+                handle?.let { saveResume(hash, it) }
+                persist(saved.copy(item = saved.item.copy(
+                    status = DownloadStatus.WAITING_FOR_WIFI,
+                    downloadSpeedBytesPerSec = 0, uploadSpeedBytesPerSec = 0,
+                )))
+            }
     }
 
     private suspend fun updateProgress(hash: String, checkpoint: Boolean) {
@@ -336,6 +434,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
             handle.prioritizeFiles(Array(info.numFiles()) { if (it in selected) Priority.DEFAULT else Priority.IGNORE })
             handle.unsetFlags(TorrentFlags.UPLOAD_MODE)
             prepared.add(hash)
+            persist(saved.copy(selected = selected.toList(), files = describe(info, selected)))
             return // Native priority changes are applied asynchronously.
         }
         val status = handle.status()
@@ -471,6 +570,14 @@ class TorrentDownloadManagerImpl @Inject constructor(
         val stream = atomic.startWrite()
         try { stream.write(bytes); atomic.finishWrite(stream) }
         catch (e: Exception) { atomic.failWrite(stream); throw e }
+    }
+
+    private companion object {
+        /** Statuses that actively use the network; these are gated by the Wi-Fi-only policy. */
+        val TRANSFER_STATUSES = setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING)
+
+        /** Statuses that keep the download service alive, including transfers waiting for Wi-Fi. */
+        val ACTIVE_STATUSES = TRANSFER_STATUSES + setOf(DownloadStatus.PUBLISHING, DownloadStatus.WAITING_FOR_WIFI)
     }
 
     private suspend fun <T> operation(block: suspend () -> T): Result<T> = withContext(io) {

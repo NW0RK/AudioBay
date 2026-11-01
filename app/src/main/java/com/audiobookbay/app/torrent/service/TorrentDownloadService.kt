@@ -35,10 +35,12 @@ class TorrentDownloadService : Service() {
             // Allow the start command and its first database update to settle.
             delay(1500)
             manager.observeDownloads().collect { downloads ->
-                val active = downloads.filter { it.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING, DownloadStatus.PUBLISHING) }
+                val active = downloads.filter { it.status in ACTIVE_STATUSES }
                 if (active.isEmpty()) {
                     stoppingBecauseIdle = true
                     stopSelfResult(lastStartId)
+                } else if (active.all { it.status == DownloadStatus.WAITING_FOR_WIFI }) {
+                    notifications.notify(NOTIFICATION_ID, notification(getString(R.string.download_waiting_wifi)))
                 } else {
                     val speed = active.sumOf { it.downloadSpeedBytesPerSec } / 1024.0
                     notifications.notify(NOTIFICATION_ID, notification(getString(R.string.download_notification, active.size, String.format(Locale.getDefault(), "%.1f", speed))))
@@ -89,6 +91,10 @@ class TorrentDownloadService : Service() {
     companion object {
         const val CHANNEL_ID = "torrent_download_channel"
         const val NOTIFICATION_ID = 1001
+        private val ACTIVE_STATUSES = setOf(
+            DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING,
+            DownloadStatus.PUBLISHING, DownloadStatus.WAITING_FOR_WIFI,
+        )
         fun start(context: Context) { context.startForegroundService(Intent(context, TorrentDownloadService::class.java)) }
         fun stop(context: Context) { context.stopService(Intent(context, TorrentDownloadService::class.java)) }
     }

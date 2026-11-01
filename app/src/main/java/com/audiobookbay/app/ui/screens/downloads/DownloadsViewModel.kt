@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.audiobookbay.app.data.storage.DownloadFolderSettings
+import com.audiobookbay.app.data.storage.DownloadNetworkSettings
 import com.audiobookbay.app.domain.model.*
 import com.audiobookbay.app.domain.repository.AudiobookRepository
 import com.audiobookbay.app.domain.repository.TorrentDownloadManager
@@ -16,11 +17,15 @@ import javax.inject.Inject
 
 enum class DownloadFormError { REQUIRED, FOLDER, ACTION }
 
+/** Files shown in the selective-download dialog. */
+data class FileSelection(val infoHash: String, val title: String, val files: List<TorrentFile>)
+
 @HiltViewModel
 class DownloadsViewModel @Inject constructor(
     private val manager: TorrentDownloadManager,
     private val storage: DownloadStorage,
     private val folders: DownloadFolderSettings,
+    private val network: DownloadNetworkSettings,
     private val repository: AudiobookRepository,
     private val saved: SavedStateHandle,
 ) : ViewModel() {
@@ -30,7 +35,10 @@ class DownloadsViewModel @Inject constructor(
     val error = _error.asStateFlow()
     private val _busy = MutableStateFlow(false)
     val busy = _busy.asStateFlow()
+    private val _fileSelection = MutableStateFlow<FileSelection?>(null)
+    val fileSelection = _fileSelection.asStateFlow()
     val folder = folders.folder.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val wifiOnly = network.wifiOnly.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val author = saved.getStateFlow("author", "")
     val title = saved.getStateFlow("bookTitle", "")
     val magnet = saved.getStateFlow("magnet", "")
@@ -100,6 +108,16 @@ class DownloadsViewModel @Inject constructor(
         else action { manager.resumeDownload(item.infoHash).getOrThrow() }
     }
     fun cancel(hash: String) = action { manager.cancelDownload(hash, deleteFiles = false).getOrThrow() }
+    fun showFiles(item: DownloadItem) = action {
+        _fileSelection.value = FileSelection(item.infoHash, item.title, manager.listFiles(item.infoHash).getOrThrow())
+    }
+    fun dismissFiles() { _fileSelection.value = null }
+    fun applyFiles(selected: Set<Int>) = action {
+        val current = _fileSelection.value ?: return@action
+        val audio = current.files.filter { it.isAudioFile }
+        manager.setFilePriorities(current.infoHash, audio.associate { it.index to (it.index in selected) }).getOrThrow()
+        _fileSelection.value = null
+    }
     fun dismissError() { _error.value = null }
     private fun action(reason: DownloadFormError = DownloadFormError.ACTION, block: suspend () -> Unit) {
         if (_busy.value) return

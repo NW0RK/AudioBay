@@ -6,11 +6,13 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -33,6 +35,8 @@ fun DownloadsScreen() {
     val title by vm.title.collectAsStateWithLifecycle()
     val magnet by vm.magnet.collectAsStateWithLifecycle()
     val folder by vm.folder.collectAsStateWithLifecycle()
+    val wifiOnly by vm.wifiOnly.collectAsStateWithLifecycle()
+    val fileSelection by vm.fileSelection.collectAsStateWithLifecycle()
     val editing by vm.editing.collectAsStateWithLifecycle()
     val editingTree by vm.editingTree.collectAsStateWithLifecycle()
     val effectiveFolder = if (editing != null) editingTree ?: folder else folder
@@ -47,6 +51,7 @@ fun DownloadsScreen() {
         LazyColumn(state = grid, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 DownloadFolderPicker(vm.folderLabel(effectiveFolder), effectiveFolder != null, !busy, vm::selectFolder)
+                if (wifiOnly) Text(stringResource(R.string.wifi_only_enabled_hint), style = MaterialTheme.typography.bodySmall)
                 Text(stringResource(R.string.import_download_hint), style = MaterialTheme.typography.bodyMedium)
                 OutlinedTextField(author, vm::setAuthor, label = { Text(stringResource(R.string.author_required)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(title, vm::setTitle, label = { Text(stringResource(R.string.title_required)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -86,10 +91,15 @@ fun DownloadsScreen() {
                                 LinearProgressIndicator(progress = { (if (publishing) download.publicationProgress else download.progress).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
                                 if (publishing) Text(stringResource(R.string.publication_stats, (download.publicationProgress * 100).toInt()))
                                 else Text(stringResource(R.string.download_stats, (download.progress * 100).toInt(), String.format(Locale.getDefault(), "%.1f", download.downloadSpeedBytesPerSec / 1024.0), download.peers))
+                                if (download.status == DownloadStatus.DOWNLOADING) {
+                                    formatRemainingTime(download.etaSeconds)?.let { remaining ->
+                                        Text(stringResource(R.string.download_eta, remaining), style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
                                 if (download.status == DownloadStatus.PUBLICATION_FAILED) Text(stringResource(R.string.publication_retry_hint))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     when {
-                                        download.status in setOf(DownloadStatus.PAUSED, DownloadStatus.ERROR, DownloadStatus.PUBLICATION_FAILED) || (download.status == DownloadStatus.COMPLETED && download.publishedFolderUri == null) ->
+                                        download.status in setOf(DownloadStatus.PAUSED, DownloadStatus.ERROR, DownloadStatus.PUBLICATION_FAILED, DownloadStatus.WAITING_FOR_WIFI) || (download.status == DownloadStatus.COMPLETED && download.publishedFolderUri == null) ->
                                             TextButton(onClick = { vm.resume(download) }, enabled = !busy) { Text(stringResource(R.string.resume)) }
                                         download.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING) ->
                                             TextButton(onClick = { vm.pause(download.infoHash) }, enabled = !busy) { Text(stringResource(R.string.pause)) }
@@ -100,6 +110,9 @@ fun DownloadsScreen() {
                                                 .onFailure { android.widget.Toast.makeText(context, R.string.open_folder_hint, android.widget.Toast.LENGTH_LONG).show() }
                                         }) { Text(stringResource(R.string.open_folder)) }
                                     }
+                                    if (download.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.WAITING_FOR_WIFI, DownloadStatus.ERROR)) {
+                                        TextButton(onClick = { vm.showFiles(download) }, enabled = !busy) { Text(stringResource(R.string.select_files)) }
+                                    }
                                     TextButton(onClick = { vm.cancel(download.infoHash) }, enabled = !busy) { Text(stringResource(R.string.remove_download)) }
                                 }
                             }
@@ -109,6 +122,43 @@ fun DownloadsScreen() {
             }
         }
     }
+    fileSelection?.let { selection ->
+        val audio = remember(selection) { selection.files.filter { it.isAudioFile } }
+        var checked by remember(selection) { mutableStateOf(audio.filter { it.isSelectedForDownload }.map { it.index }.toSet()) }
+        AlertDialog(
+            onDismissRequest = vm::dismissFiles,
+            title = { Text(stringResource(R.string.select_files_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.select_files_hint), style = MaterialTheme.typography.bodySmall)
+                    LazyColumn(Modifier.heightIn(max = 320.dp)) {
+                        items(audio, key = { it.index }) { file ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable {
+                                    checked = if (file.index in checked) checked - file.index else checked + file.index
+                                },
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(
+                                    checked = file.index in checked,
+                                    onCheckedChange = { selected ->
+                                        checked = if (selected) checked + file.index else checked - file.index
+                                    },
+                                )
+                                Text(file.path, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { vm.applyFiles(checked) }, enabled = checked.isNotEmpty() && !busy) {
+                    Text(stringResource(R.string.apply))
+                }
+            },
+            dismissButton = { TextButton(onClick = vm::dismissFiles) { Text(stringResource(R.string.cancel_edit)) } },
+        )
+    }
 }
 
 private fun statusLabel(status: DownloadStatus): Int = when (status) {
@@ -116,6 +166,7 @@ private fun statusLabel(status: DownloadStatus): Int = when (status) {
     DownloadStatus.CHECKING -> R.string.download_checking
     DownloadStatus.DOWNLOADING -> R.string.download_downloading
     DownloadStatus.PAUSED -> R.string.download_paused
+    DownloadStatus.WAITING_FOR_WIFI -> R.string.download_waiting_for_wifi
     DownloadStatus.PUBLISHING -> R.string.download_publishing
     DownloadStatus.PUBLICATION_FAILED -> R.string.download_publication_failed
     DownloadStatus.COMPLETED, DownloadStatus.SEEDING -> R.string.download_completed

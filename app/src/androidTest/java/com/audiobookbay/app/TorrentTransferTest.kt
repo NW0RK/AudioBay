@@ -9,9 +9,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.audiobookbay.app.data.local.AppDatabase
 import com.audiobookbay.app.domain.model.DownloadMetadata
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.audiobookbay.app.data.storage.*
 import com.audiobookbay.app.di.dataStore
-import androidx.datastore.preferences.core.stringPreferencesKey
+import com.audiobookbay.app.torrent.NetworkStatus
 import com.audiobookbay.app.domain.model.DownloadStatus
 import com.audiobookbay.app.torrent.TorrentDownloadManagerImpl
 import kotlinx.coroutines.*
@@ -47,8 +49,12 @@ class TorrentTransferTest {
             checkNotNull(app.dataStore.data.first()[stringPreferencesKey("shared_audiobook_folder")]) { "Choose the shared folder in Settings before this test" }
         } else InstrumentationRegistry.getArguments().getString("publicationTree") ?: shared.path
         val documentStorage: PublicationStorage = if (tree.startsWith("content:")) SafPublicationStorage(app) else DeviceFileDocuments()
+        val networkData = PreferenceDataStoreFactory.create(scope = CoroutineScope(Dispatchers.IO + SupervisorJob())) {
+            File(files, "network-preferences.preferences_pb")
+        }
         fun newManager() = TorrentDownloadManagerImpl(testContext, db.downloadDao(), Json,
-            BookPublisher(File(files, "publication-state"), documentStorage, Json), Dispatchers.IO)
+            BookPublisher(File(files, "publication-state"), documentStorage, Json),
+            DownloadNetworkSettings(networkData, Dispatchers.IO), NetworkStatus(testContext), Dispatchers.IO)
         var manager = newManager()
         try {
             val seedDir = File(testRoot, "seed").apply { mkdirs() }

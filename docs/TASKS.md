@@ -91,10 +91,10 @@ This checklist tracks preparation tasks completed by **Google Antigravity** and 
 ### Phase 4: Download Management & Persistence
 - [x] Create `DownloadsViewModel` observing `DownloadDao.observeAllDownloads()`.
 - [x] Replace Downloads placeholder with manual magnet/torrent import and real queue cards (progress, speed, peers, localized status, errors).
-- [ ] Add ETA display and file-selection controls to Downloads UI.
+- [x] Add ETA display and file-selection controls to Downloads UI.
 - [x] Connect Pause, Resume, and Cancel buttons to `TorrentDownloadManager`.
 - [x] Implement ongoing foreground notification updates in `TorrentDownloadService`.
-- [ ] Implement Wi-Fi-only download constraint checking before starting transfers.
+- [x] Implement Wi-Fi-only download constraint checking before starting transfers.
 - [ ] Automatically transfer completed downloads to `LibraryRepository`.
 
 ### Phase 5: Audiobook Player (Media3 / ExoPlayer)
@@ -179,6 +179,21 @@ Playback, bookmarks, mini-player and listening progress tasks above are retired 
 must not be implemented. Existing shared audiobooks belong to the user and survive
 queue removal/app uninstall. Future work should stay focused on downloading.
 
+
+## Wi-Fi-only and selective tracks — 2026-11-01
+
+- [x] Persist a Wi-Fi-only preference in DataStore and expose it in Settings.
+- [x] Pause active transfers on metered/unavailable connections and mark them Waiting for Wi-Fi.
+- [x] Resume waiting transfers automatically when an unmetered connection returns; keep the dataSync
+  service alive while waiting so the poll loop can react.
+- [x] Never gate shared-folder publication or remove completed books because of the network policy.
+- [x] Show ETA in the Downloads queue and format unknown/partial estimates safely.
+- [x] List torrent files after metadata arrives, persist the catalogue, and allow audio-only toggles.
+- [x] Reject empty or non-audio selections; persist selection so a later resume applies it natively.
+- [x] Unit tests: DataStore preference, ETA formatting, Settings toggle, file-selection policy.
+- [x] Final checks: APK/test APK assembly, lint, 64 JVM tests and 3 device tests
+  (`.tools/wifi-selective-final-checks.log`, `.tools/wifi-selective-unit-tests.log`,
+  `.tools/wifi-selective-device-tests.log`).
 
 ## Search bug fix — 2026-11-01
 

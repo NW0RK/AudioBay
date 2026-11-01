@@ -81,6 +81,11 @@ interface TorrentDownloadManager {
     fun observeDownload(infoHash: String): Flow<DownloadItem?>
 
     /**
+     * Lists the files of a torrent once metadata is available, including the current selection.
+     */
+    suspend fun listFiles(infoHash: String): Result<List<TorrentFile>>
+
+    /**
      * Sets selective file priority for a torrent (skip non-audio files, samples, or unwanted tracks).
      */
     suspend fun setFilePriorities(infoHash: String, filePriorities: Map<Int, Boolean>): Result<Unit>
