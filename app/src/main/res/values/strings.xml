@@ -214,4 +214,11 @@
     <string name="discovery_quota_error">Gemini quota reached. Check your API allowance and try again later.</string>
     <string name="discovery_no_results">No new catalog matches this time. Generate again to explore another direction.</string>
     <string name="discovery_timeout">Discovery took too long. Check your connection and try again.</string>
+    <string name="appearance_section">Appearance</string>
+    <string name="font_size_title">Font size</string>
+    <string name="font_size_percent">Font size: %1$d%%</string>
+    <string name="font_size_description">Adjust text throughout the app, in addition to your Android text size.</string>
+    <string name="font_size_sample">Find your next audiobook. English · M4B</string>
+    <string name="font_size_reset">Reset to 100%</string>
+    <string name="appearance_save_error">Could not save font size. Please try again.</string>
 </resources>

@@ -80,12 +80,34 @@ val LiteraryTypography = Typography(
 )
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun AudioBookBayTheme(darkTheme: Boolean = true, dynamicColor: Boolean = false, content: @Composable () -> Unit) {
+fun AudioBookBayTheme(darkTheme: Boolean = true, dynamicColor: Boolean = false, fontPercent: Int = 100, content: @Composable () -> Unit) {
     val scheme = if (dynamicColor && Build.VERSION.SDK_INT >= 31) {
         if (darkTheme) dynamicDarkColorScheme(LocalContext.current) else dynamicLightColorScheme(LocalContext.current)
     } else if (darkTheme) DarkColorScheme else LightColorScheme
     CompositionLocalProvider(LocalRippleConfiguration provides null, androidx.compose.foundation.LocalIndication provides com.audiobookbay.app.ui.components.QuietIndication, LocalSemanticColors provides semanticColors(darkTheme, scheme)) {
-        MaterialTheme(colorScheme = scheme, typography = LiteraryTypography,
+        MaterialTheme(colorScheme = scheme, typography = remember(fontPercent) { scaledTypography(fontPercent) },
             shapes = Shapes(small = RoundedCornerShape(6.dp), medium = RoundedCornerShape(10.dp), large = RoundedCornerShape(12.dp)), content = content)
     }
+}
+
+internal fun scaledTypography(percent: Int): Typography {
+    val factor = percent.coerceIn(80, 150) / 100f
+    fun TextStyle.scaled() = copy(fontSize = fontSize * factor, lineHeight = lineHeight * factor)
+    return LiteraryTypography.copy(
+        displayLarge = LiteraryTypography.displayLarge.scaled(),
+        displayMedium = LiteraryTypography.displayMedium.scaled(),
+        displaySmall = LiteraryTypography.displaySmall.scaled(),
+        headlineLarge = LiteraryTypography.headlineLarge.scaled(),
+        headlineMedium = LiteraryTypography.headlineMedium.scaled(),
+        headlineSmall = LiteraryTypography.headlineSmall.scaled(),
+        titleLarge = LiteraryTypography.titleLarge.scaled(),
+        titleMedium = LiteraryTypography.titleMedium.scaled(),
+        titleSmall = LiteraryTypography.titleSmall.scaled(),
+        bodyLarge = LiteraryTypography.bodyLarge.scaled(),
+        bodyMedium = LiteraryTypography.bodyMedium.scaled(),
+        bodySmall = LiteraryTypography.bodySmall.scaled(),
+        labelLarge = LiteraryTypography.labelLarge.scaled(),
+        labelMedium = LiteraryTypography.labelMedium.scaled(),
+        labelSmall = LiteraryTypography.labelSmall.scaled(),
+    )
 }

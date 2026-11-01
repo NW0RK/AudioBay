@@ -21,3 +21,11 @@
 - [x] Put home language/format on one line and file size below.
 - [x] Apply the generated app icon and prepare updater-compatible version 0.2.0 (code 11).
 - [x] Pass 132 unit tests, lint, optimized public build and 10 device UI checks; verify signing certificate and checksum.
+
+## Metadata separator and font-size settings - 0.2.2
+
+- [x] Correct the catalog separator using an explicit Unicode middle dot.
+- [x] Add persistent app-wide font size from 80% to 150%, in 1% steps, with a preview and reset.
+- [x] Preserve Android text scaling; scale app typography and line spacing together.
+- [x] Pass 135 unit tests, debug lint, public debug/release builds and three connected Android UI checks.
+- [x] Prepare version 0.2.2 (code 13), verify the existing upgrade certificate and generate the public APK checksum.

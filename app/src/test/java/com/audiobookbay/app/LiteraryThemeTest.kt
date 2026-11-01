@@ -15,6 +15,17 @@ class LiteraryThemeTest {
         fun linear(c: Float): Double = if (c <= 0.04045f) c / 12.92 else ((c + 0.055) / 1.055).pow(2.4)
         return 0.2126 * linear(color.red) + 0.7152 * linear(color.green) + 0.0722 * linear(color.blue)
     }
+    @Test fun fontAdjustmentScalesEveryStyleAndLineHeight() {
+        fun styles(t: androidx.compose.material3.Typography) = listOf(t.displayLarge,t.displayMedium,t.displaySmall,
+            t.headlineLarge,t.headlineMedium,t.headlineSmall,t.titleLarge,t.titleMedium,t.titleSmall,
+            t.bodyLarge,t.bodyMedium,t.bodySmall,t.labelLarge,t.labelMedium,t.labelSmall)
+        for (percent in listOf(80, 100, 123, 150)) {
+            styles(LiteraryTypography).zip(styles(com.audiobookbay.app.ui.theme.scaledTypography(percent))).forEach { (base, scaled) ->
+                assertEquals(base.fontSize.value * percent / 100f, scaled.fontSize.value, 0.001f)
+                assertEquals(base.lineHeight.value * percent / 100f, scaled.lineHeight.value, 0.001f)
+            }
+        }
+    }
     @Test fun textAndContainerPairsMeetNormalTextContrast() {
         listOf(DarkColorScheme, LightColorScheme).forEach { c ->
             listOf(c.primary to c.onPrimary, c.primaryContainer to c.onPrimaryContainer,

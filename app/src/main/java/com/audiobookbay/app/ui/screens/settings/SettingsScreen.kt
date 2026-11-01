@@ -19,6 +19,9 @@ import com.audiobookbay.app.ui.components.DownloadFolderPicker
 @Composable
 fun SettingsScreen() {
     val vm: SettingsViewModel = hiltViewModel()
+    val appearance: com.audiobookbay.app.ui.AppearanceViewModel = hiltViewModel()
+    val fontPercent by appearance.fontPercent.collectAsStateWithLifecycle()
+    val fontSaveFailed by appearance.saveFailed.collectAsStateWithLifecycle()
     val historyClearFailed by vm.historyClearFailed.collectAsStateWithLifecycle()
     val folder by vm.folder.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
@@ -53,6 +56,7 @@ fun SettingsScreen() {
             }
             if (networkError) Text(stringResource(R.string.network_settings_error), color = MaterialTheme.colorScheme.error)
             } }
+            AppearanceSettingsCard(fontPercent, fontSaveFailed, appearance::setFontPercent)
             ApiKeySettingsCard(apiKey, keyConfigured, keyBusy, keySaved,
                 if (keyError) keyFailure ?: com.audiobookbay.app.data.storage.ApiKeyFailure.STORAGE else null,
                 onChange = { apiKey = it }, onSave = { vm.saveApiKey(apiKey) },

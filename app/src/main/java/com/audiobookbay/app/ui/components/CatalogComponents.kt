@@ -141,7 +141,7 @@ private fun BookCardText(book: Audiobook, state: BookCardState, onSave: () -> Un
             if (language.isNotEmpty() || format.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
                 if (language.isNotEmpty()) Text(language, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                if (language.isNotEmpty() && format.isNotEmpty()) Text(" · ", style = MaterialTheme.typography.labelMedium)
+                if (language.isNotEmpty() && format.isNotEmpty()) Text(" \u00B7 ", style = MaterialTheme.typography.labelMedium)
                 if (format.isNotEmpty()) Text(format, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
             book.formattedSize?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }

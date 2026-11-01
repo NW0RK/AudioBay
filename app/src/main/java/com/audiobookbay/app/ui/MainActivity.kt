@@ -1,6 +1,9 @@
 package com.audiobookbay.app.ui
 
 import android.os.Bundle
+import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -15,12 +18,14 @@ import com.audiobookbay.app.ui.screens.settings.AppUpdateAnnouncement
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val appearance: AppearanceViewModel by viewModels()
     @Inject lateinit var updates: AppUpdateRepository
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AudioBookBayTheme {
+            val fontPercent by appearance.fontPercent.collectAsStateWithLifecycle()
+            AudioBookBayTheme(fontPercent = fontPercent) {
                 AudioBookBayNavHost()
                 AppUpdateAnnouncement(updates)
             }
