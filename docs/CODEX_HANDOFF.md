@@ -93,3 +93,21 @@ constraints, richer selective-file UI, and release signing/minification checks r
 Native ABIs currently include arm64 and downloads require API28; browsing minSdk is26.
 No playback work should be reintroduced. The Android folder grant is mandatory and
 cannot be silently manufactured. Files in shared storage remain after app uninstall.
+
+
+## Search correction — mixed-case catalog queries (2026-11-01)
+
+The user reported missing Witcher and The Last Wish results. Live checks established
+that the public catalog silently serves its home page for capitalized query values,
+while lowercase queries produce actual search pages. Requests now trim/collapse
+whitespace and lowercase the catalog query (including pagination). The app validates
+that the response canonical URL contains the requested search instead of requiring
+every listing title to contain all query words. Real catalog results can match a
+series/description; they are retained, with direct title/author matches ranked first.
+A verified empty search page stays empty and does not silently change catalogs.
+Four regression tests cover normalization, metadata matches, empty results and paging.
+Assembly, all 52 unit tests and lint passed (.tools/catalog-search-fix.log). The fix
+was installed on the phone; capitalized Witcher returned a matching catalog listing,
+and The Last Wish returned multiple Andrzej Sapkowski listings. UI verification XML
+is in .tools/searchfix-witcher.xml and .tools/searchfix-lastwish.xml. No downloads
+were started while verifying these catalog results.

@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import timber.log.Timber
@@ -67,18 +68,13 @@ class AudiobookRemoteDataSourceImpl @Inject constructor(
         try {
             if (page == 1) searchUsesLibriVox = false
             if (!searchUsesLibriVox) {
-                val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+                // The public catalog silently serves its home page for mixed-case queries.
+                val normalized = normalizeSearchQuery(query)
+                val encodedQuery = java.net.URLEncoder.encode(normalized, "UTF-8")
                 val url = if (page == 1) "$currentBaseUrl/?s=$encodedQuery" else "$currentBaseUrl/page/$page/?s=$encodedQuery"
-                // Some catalog responses ignore the query and return the home page.
-                // Never present unrelated home listings as search matches.
-                val terms = query.lowercase().split(Regex("\\s+")).filter { it.isNotBlank() }
-                val books = fetchListing(url)?.filter { book ->
-                    val searchable = "${book.title} ${book.author} ${book.narrator.orEmpty()}".lowercase()
-                    terms.all { it in searchable }
-                }
-                if (books != null && (books.isNotEmpty() || page > 1)) {
-                    return@withContext Resource.Success(books)
-                }
+                val books = fetchSearchListing(url, normalized)
+                currentCoroutineContext().ensureActive()
+                if (books != null) return@withContext Resource.Success(books)
                 if (page > 1) return@withContext Resource.Error("Catalog temporarily unavailable")
                 searchUsesLibriVox = true
             }
@@ -90,6 +86,31 @@ class AudiobookRemoteDataSourceImpl @Inject constructor(
             Resource.Error("Unable to search audiobooks", e)
         }
     }
+
+    private suspend fun fetchSearchListing(url: String, query: String): List<Audiobook>? = try {
+        okHttpClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+            currentCoroutineContext().ensureActive()
+            if (!response.isSuccessful) return@use null
+            val html = response.body?.string().orEmpty()
+            val document = org.jsoup.Jsoup.parse(html, currentBaseUrl)
+            val canonical = document.selectFirst("link[rel=canonical]")?.absUrl("href")
+            val canonicalQuery = canonical?.toHttpUrlOrNull()?.queryParameter("s")
+            // Validate the response itself instead of requiring every result title to
+            // contain the query: catalog matches can come from descriptions/series names.
+            if (canonicalQuery == null || normalizeSearchQuery(canonicalQuery) != query) return@use null
+            val terms = query.split(' ').filter { it.isNotBlank() }
+            parser.parseAudiobookList(html, currentBaseUrl).sortedByDescending { book ->
+                val text = normalizeSearchQuery("${book.title} ${book.author} ${book.narrator.orEmpty()}")
+                terms.all { it in text }
+            }
+        }
+    } catch (e: java.io.IOException) {
+        currentCoroutineContext().ensureActive()
+        Timber.w(e, "Catalog search unavailable")
+        null
+    }
+
+    private fun normalizeSearchQuery(query: String): String = query.trim().replace(Regex("\\s+"), " ").lowercase(java.util.Locale.ROOT)
 
     private suspend fun libriVoxBooks(fetch: suspend () -> LibriVoxResponse): List<Audiobook> = try {
         fetch().books.map { it.toAudiobook() }

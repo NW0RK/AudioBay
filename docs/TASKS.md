@@ -178,3 +178,13 @@ app retains the configured folder grant. Test audio and test-author folders are 
 Playback, bookmarks, mini-player and listening progress tasks above are retired and
 must not be implemented. Existing shared audiobooks belong to the user and survive
 queue removal/app uninstall. Future work should stay focused on downloading.
+
+
+## Search bug fix — 2026-11-01
+
+- [x] Normalize mixed-case catalog search requests and repeated whitespace.
+- [x] Validate canonical query to reject home/challenge responses without discarding description/series matches.
+- [x] Retain server results through pagination and rank direct title/author matches first.
+- [x] Keep verified empty catalog results on the original source.
+- [x] Add four regressions; APK assembly, 52 unit tests and lint pass.
+- [x] Complete phone verification of both Witcher and The Last Wish after installation; Sapkowski listings are visible.

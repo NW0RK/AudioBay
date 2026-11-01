@@ -78,4 +78,46 @@ class DiscoveryRemoteTest {
         val source = AudiobookRemoteDataSourceImpl(client(), AudioBookBayParser(), api, StandardTestDispatcher(testScheduler))
         assertEquals(Resource.Success(emptyList<Audiobook>()), source.searchAudiobooks("Missing", 1))
     }
+
+    private fun searchClient(body: String, onRequest: (HttpUrl) -> Unit = {}) = OkHttpClient.Builder().addInterceptor { chain ->
+        onRequest(chain.request().url)
+        Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK").body(body.toResponseBody()).build()
+    }.build()
+
+    @Test fun `mixed case and repeated spaces become a lowercase catalog query`() = runTest {
+        val client = searchClient("""<link rel="canonical" href="/?s=the+last+wish" />
+            <div class="post"><div class="postTitle"><h2><a href="/abss/a-story/">The Last Wish</a></h2></div></div>""") {
+            assertEquals("the last wish", it.queryParameter("s"))
+        }
+        val source = AudiobookRemoteDataSourceImpl(client, AudioBookBayParser(), api, StandardTestDispatcher(testScheduler))
+        val result = source.searchAudiobooks("  The   Last Wish  ", 1) as Resource.Success
+        assertEquals("The Last Wish", result.data.single().title)
+        assertEquals(AudiobookSource.AUDIOBOOKBAY, result.data.single().source)
+        coVerify(exactly = 0) { api.searchAudiobooks(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test fun `verified catalog matches are retained even when keyword only appears in metadata`() = runTest {
+        val html = """<link rel="canonical" href="/?s=witcher" />
+            <div class="post"><div class="postTitle"><h2><a href="/abss/short-stories/">Fantasy Short Stories</a></h2></div></div>
+            <div class="post"><div class="postTitle"><h2><a href="/abss/series/">The Witcher</a></h2></div></div>"""
+        val source = AudiobookRemoteDataSourceImpl(searchClient(html), AudioBookBayParser(), api, StandardTestDispatcher(testScheduler))
+        val result = source.searchAudiobooks("Witcher", 1) as Resource.Success
+        assertEquals(listOf("The Witcher", "Fantasy Short Stories"), result.data.map { it.title })
+    }
+
+    @Test fun `empty verified catalog page does not silently switch to a different catalog`() = runTest {
+        val source = AudiobookRemoteDataSourceImpl(searchClient("""<link rel="canonical" href="/?s=missing" />"""), AudioBookBayParser(), api, StandardTestDispatcher(testScheduler))
+        assertEquals(Resource.Success(emptyList<Audiobook>()), source.searchAudiobooks("Missing", 1))
+        coVerify(exactly = 0) { api.searchAudiobooks(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test fun `pagination uses the normalized query and keeps metadata matches accessible`() = runTest {
+        val client = searchClient("""<link rel="canonical" href="/page/2/?s=witcher" />
+            <div class="post"><div class="postTitle"><h2><a href="/abss/story/">A Series Story</a></h2></div></div>""") {
+            assertEquals("/page/2/", it.encodedPath)
+            assertEquals("witcher", it.queryParameter("s"))
+        }
+        val source = AudiobookRemoteDataSourceImpl(client, AudioBookBayParser(), api, StandardTestDispatcher(testScheduler))
+        assertEquals("A Series Story", (source.searchAudiobooks("Witcher", 2) as Resource.Success).data.single().title)
+    }
 }
