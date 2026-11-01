@@ -505,6 +505,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
                 lock.withLock {
                     currentCoroutineContext().ensureActive()
                     records[hash]?.let {
+                        dao.recordHistory(com.audiobookbay.app.data.local.entity.DownloadHistoryEntity(hash, it.item.audiobookId, it.item.title, checkNotNull(it.item.author), System.currentTimeMillis()))
                         persist(it.copy(item = it.item.copy(status = DownloadStatus.COMPLETED, publishedFolderUri = uri,
                             publicationProgress = 1f, progress = 1f, downloadSpeedBytesPerSec = 0, uploadSpeedBytesPerSec = 0,
                             completedTimestamp = System.currentTimeMillis(), errorMessage = null)))

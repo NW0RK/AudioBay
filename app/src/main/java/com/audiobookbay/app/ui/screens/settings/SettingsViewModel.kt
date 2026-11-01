@@ -16,7 +16,15 @@ class SettingsViewModel @Inject constructor(
     private val manager: TorrentDownloadManager,
     network: DownloadNetworkSettings,
     private val keys: com.audiobookbay.app.data.storage.ApiKeySettings,
+    private val discovery: com.audiobookbay.app.domain.repository.RecommendationRepository? = null,
 ) : ViewModel() {
+    private val _historyClearFailed = MutableStateFlow(false)
+    val historyClearFailed = _historyClearFailed.asStateFlow()
+    fun clearRecommendationHistory() { viewModelScope.launch {
+        try { discovery?.clear(); _historyClearFailed.value = false }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { _historyClearFailed.value = true }
+    } }
     val keyConfigured = keys.configured
     private val _keyBusy = MutableStateFlow(false)
     val keyBusy = _keyBusy.asStateFlow()

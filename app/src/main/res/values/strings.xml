@@ -133,8 +133,8 @@
     <string name="correcting_book_names">Cleaning book and author names…</string>
     <string name="book_names_failed">Could not fix names. You can edit them or try again.</string>
     <string name="book_names_corrected">Names corrected. Review before downloading.</string>
-    <string name="api_key_section">AI name correction</string>
-    <string name="api_key_description">Add your Gemini API key to clean book and author names. It is encrypted on this device and excluded from backups. Using correction sends the entered names to Google and uses your API quota.</string>
+    <string name="api_key_section">AI discovery and name correction</string>
+    <string name="api_key_description">Add your Gemini API key to clean book and author names. It is encrypted on this device and excluded from backups. Name correction sends entered names to Google. Generate picks sends up to 30 completed book titles and authors to Google. Both use your API quota.</string>
     <string name="api_key_label">Gemini API key</string>
     <string name="api_key_configured">Your key is saved on this device.</string>
     <string name="api_key_missing">No personal key saved.</string>
@@ -202,4 +202,16 @@
     <string name="queue_error_hint">Your download queue could not be loaded. Try again.</string>
     <string name="download_progress_label">Download progress</string>
     <string name="publication_progress_label">Copying to your audiobook folder</string>
+    <string name="discovery_editorial">Your next good story.</string>
+    <string name="discovery_generate">Generate picks</string>
+    <string name="discovery_generating">Finding your next books…</string>
+    <string name="discovery_context">Based on completed downloads. Generate sends recent titles and authors to Gemini.</string>
+    <string name="discovery_first">Complete your first download to get personal picks.</string>
+    <string name="discovery_setup">Set up AI</string>
+    <string name="discovery_failed">Could not generate picks. Check your connection, Gemini key and quota, then try again.</string>
+    <string name="discovery_clear">Clear recommendation history</string>
+    <string name="discovery_key_error">Check your Gemini API key in Settings, then generate again.</string>
+    <string name="discovery_quota_error">Gemini quota reached. Check your API allowance and try again later.</string>
+    <string name="discovery_no_results">No new catalog matches this time. Generate again to explore another direction.</string>
+    <string name="discovery_timeout">Discovery took too long. Check your connection and try again.</string>
 </resources>

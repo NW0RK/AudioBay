@@ -20,7 +20,7 @@ class SavedPersistenceTest {
         val name = "saved-upgrade-test.db"
         context.deleteDatabase(name)
         fun open() = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(AppDatabase.MIGRATION_3_4).build()
+            .addMigrations(AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5).build()
         var db = open()
         try {
             val sql = db.openHelper.writableDatabase

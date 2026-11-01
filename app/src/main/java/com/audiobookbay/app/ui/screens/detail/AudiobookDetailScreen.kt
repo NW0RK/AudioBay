@@ -5,7 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Download
-import com.audiobookbay.app.ui.components.GlassPanel
+import com.audiobookbay.app.ui.components.EditorialPanel
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -90,7 +90,7 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
                             modifier = Modifier.fillMaxSize().padding(horizontal = 64.dp, vertical = 12.dp).graphicsLayer { alpha = 1f - fraction })
                         if (fraction > 0.8f) Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 1,
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.Center).padding(horizontal = 80.dp))
-                        if (book.torrentInfo?.magnetUri != null) FilledIconButton(onClick = { onDownload(book.id) },
+                        if (book.torrentInfo?.magnetUri != null) FilledIconButton(shape = MaterialTheme.shapes.small, onClick = { onDownload(book.id) },
                             modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)) {
                             Icon(Icons.Default.Download, stringResource(R.string.start_download))
                         }
@@ -140,7 +140,7 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
                             Text(stringResource(R.string.description_heading), style = MaterialTheme.typography.titleLarge)
                             Text(book.description, style = MaterialTheme.typography.bodyLarge,
                                 maxLines = if (expanded) Int.MAX_VALUE else 7, overflow = TextOverflow.Ellipsis)
-                            if (book.description.isNotBlank()) TextButton(onClick = { expanded = !expanded }) {
+                            if (book.description.isNotBlank()) TextButton(shape = MaterialTheme.shapes.small, onClick = { expanded = !expanded }) {
                                 Text(stringResource(if (expanded) R.string.show_less else R.string.read_more))
                             }
                         }
@@ -158,12 +158,12 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text(stringResource(R.string.comments_title, book.comments.size), style = MaterialTheme.typography.titleLarge)
-                                TextButton(onClick = onRetry) { Text(stringResource(R.string.refresh_comments)) }
+                                TextButton(shape = MaterialTheme.shapes.small, onClick = onRetry) { Text(stringResource(R.string.refresh_comments)) }
                                 if (book.comments.isEmpty()) Text(stringResource(R.string.no_comments), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         items(book.comments, key = { it.id }) { comment ->
-                            GlassPanel(Modifier.fillMaxWidth()) {
+                            EditorialPanel(Modifier.fillMaxWidth()) {
                                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(comment.author.ifBlank { stringResource(R.string.comment_reader) }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                                     if (comment.date.isNotBlank()) Text(comment.date, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -183,8 +183,8 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
         Box(
             modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 8.dp).size(44.dp)
                 .clip(MaterialTheme.shapes.small)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.78f))
-                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f), MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surface)
+
                 .clickable { onNavigateBack() },
             contentAlignment = Alignment.Center,
         ) {
@@ -195,7 +195,7 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
 
 @Composable
 private fun DetailPanel(content: @Composable ColumnScope.() -> Unit) {
-    GlassPanel(Modifier.fillMaxWidth()) {
+    EditorialPanel(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
 }

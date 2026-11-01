@@ -18,6 +18,7 @@ import com.audiobookbay.app.data.local.entity.PlaybackProgressEntity
 
 @Database(
     entities = [
+        com.audiobookbay.app.data.local.entity.DownloadHistoryEntity::class,
         com.audiobookbay.app.data.local.entity.SavedBookEntity::class,
         AudiobookEntity::class,
         CatalogCacheEntity::class,
@@ -26,7 +27,7 @@ import com.audiobookbay.app.data.local.entity.PlaybackProgressEntity
         DownloadEntity::class,
         BookmarkEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,6 +39,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun bookmarkDao(): BookmarkDao
 
     companion object {
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS download_history (infoHash TEXT NOT NULL PRIMARY KEY, audiobookId TEXT NOT NULL, title TEXT NOT NULL, author TEXT NOT NULL, completedAt INTEGER NOT NULL)")
+                db.execSQL("INSERT OR IGNORE INTO download_history SELECT infoHash, audiobookId, title, author, completedTimestamp FROM downloads WHERE status = 'COMPLETED' AND publishedFolderUri IS NOT NULL AND completedTimestamp IS NOT NULL AND trim(title) != '' AND author IS NOT NULL AND trim(author) != ''")
+            }
+        }
+
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `saved_books` (`source` TEXT NOT NULL, `bookId` TEXT NOT NULL, `payload` TEXT NOT NULL, `savedAt` INTEGER NOT NULL, PRIMARY KEY(`source`, `bookId`))")

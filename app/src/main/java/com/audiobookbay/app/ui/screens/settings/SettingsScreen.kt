@@ -1,7 +1,7 @@
 package com.audiobookbay.app.ui.screens.settings
 
 import androidx.compose.foundation.layout.*
-import com.audiobookbay.app.ui.components.GlassPanel
+import com.audiobookbay.app.ui.components.EditorialPanel
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -19,6 +19,7 @@ import com.audiobookbay.app.ui.components.DownloadFolderPicker
 @Composable
 fun SettingsScreen() {
     val vm: SettingsViewModel = hiltViewModel()
+    val historyClearFailed by vm.historyClearFailed.collectAsStateWithLifecycle()
     val folder by vm.folder.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
@@ -35,20 +36,20 @@ fun SettingsScreen() {
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(R.string.nav_settings)) })
         Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            GlassPanel(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            EditorialPanel(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.storage_section))
             DownloadFolderPicker(vm.label(folder), folder != null, !busy, vm::select)
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (error) Text(stringResource(R.string.folder_access_error), color = MaterialTheme.colorScheme.error)
             } }
-            GlassPanel(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            EditorialPanel(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.network_section))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.wifi_only_title), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.wifi_only_description), style = MaterialTheme.typography.bodySmall)
                 }
-                Switch(checked = wifiOnly, onCheckedChange = vm::setWifiOnly)
+                com.audiobookbay.app.ui.components.EditorialSwitch(checked = wifiOnly, onCheckedChange = vm::setWifiOnly)
             }
             if (networkError) Text(stringResource(R.string.network_settings_error), color = MaterialTheme.colorScheme.error)
             } }
@@ -56,6 +57,8 @@ fun SettingsScreen() {
                 if (keyError) keyFailure ?: com.audiobookbay.app.data.storage.ApiKeyFailure.STORAGE else null,
                 onChange = { apiKey = it }, onSave = { vm.saveApiKey(apiKey) },
                 onRemove = { vm.saveApiKey("") })
+            TextButton(shape = MaterialTheme.shapes.small, onClick = vm::clearRecommendationHistory) { Text(stringResource(R.string.discovery_clear)) }
+            if (historyClearFailed) Text(stringResource(R.string.discovery_failed), color = MaterialTheme.colorScheme.error)
             AppUpdateSettings()
             CrashReportSettings()
             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.large) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

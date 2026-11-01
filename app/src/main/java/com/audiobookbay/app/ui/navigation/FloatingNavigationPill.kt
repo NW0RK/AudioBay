@@ -22,7 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.audiobookbay.app.R
-import com.audiobookbay.app.ui.components.GlassPanel
+import com.audiobookbay.app.ui.components.EditorialPanel
 
 internal data class BottomNavItem(val label: Int, val icon: ImageVector, val route: NavRoute)
 
@@ -34,39 +34,21 @@ internal val bottomNavItems = listOf(
     BottomNavItem(R.string.nav_settings, Icons.Outlined.Settings, NavRoute.Settings),
 )
 
-/** Fixed-size highlights keep the glass pill calm while selection changes. */
+/** Labeled editorial navigation with a single moving rule. */
 @Composable
-internal fun FloatingNavigationPill(
-    selectedRoute: NavRoute?,
-    onNavigate: (NavRoute) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        GlassPanel(
-            modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth(),
-            shape = CircleShape,
-        ) {
-            Row(
-                Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp).selectableGroup(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                bottomNavItems.forEach { item ->
-                    val selected = selectedRoute?.let { it::class == item.route::class } == true
-                    val tint by animateColorAsState(
-                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        tween(180), label = "Navigation icon tint",
-                    )
-                    val alpha by animateFloatAsState(
-                        if (selected) 0.18f else 0f, tween(180), label = "Navigation highlight",
-                    )
-                    Box(
-                        Modifier.weight(1f).fillMaxHeight().clip(CircleShape)
-                            .selectable(selected, role = Role.Tab, onClick = { onNavigate(item.route) }),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(Modifier.size(44.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = alpha), CircleShape))
-                        Icon(item.icon, stringResource(item.label), Modifier.size(24.dp), tint = tint)
-                    }
+internal fun FloatingNavigationPill(selectedRoute: NavRoute?, onNavigate: (NavRoute) -> Unit, modifier: Modifier = Modifier) {
+    BoxWithConstraints(modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
+        val cellWidth = maxWidth / bottomNavItems.size
+        val selectedIndex = bottomNavItems.indexOfFirst { selectedRoute?.let { route -> route::class == it.route::class } == true }.coerceAtLeast(0)
+        val underline by androidx.compose.animation.core.animateDpAsState(cellWidth * selectedIndex + (cellWidth - 24.dp) / 2, tween(180), label = "Navigation rule")
+        Box(Modifier.offset(x = underline).width(24.dp).height(2.dp).background(MaterialTheme.colorScheme.primary))
+        Row(Modifier.fillMaxWidth().heightIn(min = 68.dp).selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
+            bottomNavItems.forEach { item ->
+                val selected = selectedRoute?.let { it::class == item.route::class } == true
+                val tint by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, tween(140), label = "Navigation tint")
+                Column(Modifier.weight(1f).heightIn(min = 68.dp).selectable(selected, role = Role.Tab, onClick = { onNavigate(item.route) }).padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(item.icon, stringResource(item.label), Modifier.size(22.dp), tint = tint)
+                    androidx.compose.material3.Text(stringResource(item.label), color = tint, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
             }
         }

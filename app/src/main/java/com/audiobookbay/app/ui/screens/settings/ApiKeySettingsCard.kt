@@ -12,7 +12,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.audiobookbay.app.R
 import com.audiobookbay.app.data.storage.ApiKeyFailure
-import com.audiobookbay.app.ui.components.GlassPanel
+import com.audiobookbay.app.ui.components.EditorialPanel
 import com.audiobookbay.app.ui.components.SectionHeading
 
 @Composable
@@ -20,7 +20,7 @@ fun ApiKeySettingsCard(
     input: String, configured: Boolean, busy: Boolean, saved: Boolean, failure: ApiKeyFailure?,
     onChange: (String) -> Unit, onSave: () -> Unit, onRemove: () -> Unit,
 ) {
-    GlassPanel(Modifier.fillMaxWidth()) {
+    EditorialPanel(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionHeading(stringResource(R.string.api_key_section))
             Text(stringResource(R.string.api_key_description), style = MaterialTheme.typography.bodySmall)
@@ -33,8 +33,8 @@ fun ApiKeySettingsCard(
                 singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth().testTag("gemini_api_key"),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onSave, enabled = !busy && input.isNotBlank()) { Text(stringResource(R.string.api_key_save)) }
-                TextButton(onClick = onRemove, enabled = !busy && configured) { Text(stringResource(R.string.api_key_remove)) }
+                Button(shape = MaterialTheme.shapes.small, onClick = onSave, enabled = !busy && input.isNotBlank()) { Text(stringResource(R.string.api_key_save)) }
+                TextButton(shape = MaterialTheme.shapes.small, onClick = onRemove, enabled = !busy && configured) { Text(stringResource(R.string.api_key_remove)) }
             }
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (failure != null) Text(stringResource(when (failure) {

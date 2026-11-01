@@ -15,6 +15,9 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
+    @Binds @Singleton
+    abstract fun bindRecommendations(impl: com.audiobookbay.app.data.repository.DiscoveryRepository): com.audiobookbay.app.domain.repository.RecommendationRepository
+
     @Binds
     @Singleton
     abstract fun bindAppUpdates(impl: com.audiobookbay.app.data.repository.GitHubAppUpdateRepository): com.audiobookbay.app.domain.repository.AppUpdateRepository

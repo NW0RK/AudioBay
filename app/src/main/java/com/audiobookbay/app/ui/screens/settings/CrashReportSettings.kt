@@ -21,7 +21,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.audiobookbay.app.R
 import com.audiobookbay.app.diagnostics.CrashReports
-import com.audiobookbay.app.ui.components.GlassPanel
+import com.audiobookbay.app.ui.components.EditorialPanel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,24 +73,24 @@ fun CrashReportSettings() {
     val context = LocalContext.current
     var openError by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
-    GlassPanel(Modifier.fillMaxWidth()) {
+    EditorialPanel(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.crashes_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.crashes_description), style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.crashes_export_description), style = MaterialTheme.typography.bodySmall)
-            Button(onClick = {
+            Button(shape = MaterialTheme.shapes.small, onClick = {
                 try { exporter.launch("AudioBay-diagnostics.txt"); openError = false }
                 catch (_: Exception) { openError = true }
             }, enabled = !exporting) { Text(stringResource(R.string.crashes_export)) }
             if (exporting) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (exported) Text(stringResource(R.string.crashes_exported))
             if (reports.isEmpty()) Text(stringResource(R.string.crashes_empty))
-            OutlinedButton(onClick = { vm.refresh(diagnostic = true) }) { Text(stringResource(R.string.crashes_create)) }
+            OutlinedButton(shape = MaterialTheme.shapes.small, onClick = { vm.refresh(diagnostic = true) }) { Text(stringResource(R.string.crashes_create)) }
             reports.forEachIndexed { index, report ->
                 var expanded by remember(report) { mutableStateOf(false) }
-                TextButton(onClick = { expanded = !expanded }) { Text(stringResource(R.string.crashes_view, index + 1)) }
+                TextButton(shape = MaterialTheme.shapes.small, onClick = { expanded = !expanded }) { Text(stringResource(R.string.crashes_view, index + 1)) }
                 if (expanded) SelectionContainer { Text(report, style = MaterialTheme.typography.bodySmall) }
-                Button(onClick = {
+                Button(shape = MaterialTheme.shapes.small, onClick = {
                     try {
                         val uri = Uri.parse("https://github.com/NW0RK/AudioBay/issues/new").buildUpon()
                             .appendQueryParameter("title", "Download crash report")
@@ -102,14 +102,14 @@ fun CrashReportSettings() {
                 }) { Text(stringResource(R.string.crashes_report)) }
             }
             if (reports.isNotEmpty()) {
-                OutlinedButton(onClick = {
+                OutlinedButton(shape = MaterialTheme.shapes.small, onClick = {
                     context.getSystemService(ClipboardManager::class.java).setPrimaryClip(
                         ClipData.newPlainText("AudioBay crash reports", reports.joinToString("\n\n---\n\n")))
                     copied = true
                 }) { Text(stringResource(R.string.crashes_copy)) }
-                TextButton(onClick = { copied = false; vm.refresh(clear = true) }) { Text(stringResource(R.string.crashes_delete)) }
+                TextButton(shape = MaterialTheme.shapes.small, onClick = { copied = false; vm.refresh(clear = true) }) { Text(stringResource(R.string.crashes_delete)) }
             }
-            TextButton(onClick = { vm.refresh() }) { Text(stringResource(R.string.crashes_refresh)) }
+            TextButton(shape = MaterialTheme.shapes.small, onClick = { vm.refresh() }) { Text(stringResource(R.string.crashes_refresh)) }
             if (copied) Text(stringResource(R.string.crashes_copied))
             if (error || openError) Text(stringResource(R.string.crashes_error), color = MaterialTheme.colorScheme.error)
         }

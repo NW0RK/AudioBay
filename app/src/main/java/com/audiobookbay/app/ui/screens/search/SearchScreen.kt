@@ -47,13 +47,13 @@ fun SearchScreen(onNavigateToDetail: (String) -> Unit, onBrowse: () -> Unit = {}
             keyboardActions = KeyboardActions(onSearch = { vm.submit(); keyboard?.hide() }),
             value = query, onValueChange = vm::setQuery, singleLine = true,
             leadingIcon = { Icon(androidx.compose.material.icons.Icons.Default.Search, null) },
-            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { vm.setQuery("") }) { Icon(androidx.compose.material.icons.Icons.Default.Close, stringResource(R.string.clear_search)) } },
+            trailingIcon = { if (query.isNotEmpty()) IconButton(shape = MaterialTheme.shapes.small, onClick = { vm.setQuery("") }) { Icon(androidx.compose.material.icons.Icons.Default.Close, stringResource(R.string.clear_search)) } },
             shape = MaterialTheme.shapes.large,
             label = { Text(stringResource(R.string.search_hint)) }, modifier = Modifier.fillMaxWidth(),
         )
         if (query.isBlank() && history.isNotEmpty()) {
             com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.recent_searches))
-            TextButton(onClick = vm::clearHistory) { Text(stringResource(R.string.clear_history)) }
+            TextButton(shape = MaterialTheme.shapes.small, onClick = vm::clearHistory) { Text(stringResource(R.string.clear_history)) }
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(history) { item -> SuggestionChip(onClick = { vm.setQuery(item) }, label = { Text(item) }) }
             }
@@ -78,8 +78,8 @@ fun SearchScreen(onNavigateToDetail: (String) -> Unit, onBrowse: () -> Unit = {}
                             onDownload = { onDownload(if (card.download == null) book.id else null) }, onClick = { onNavigateToDetail(book.id) }) }
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         if (loadingMore) CircularProgressIndicator()
-                        else if (pageError) TextButton(onClick = vm::retry) { Text(stringResource(R.string.retry)) }
-                        else if (!endReached) TextButton(onClick = vm::loadMore) { Text(stringResource(R.string.load_more)) }
+                        else if (pageError) TextButton(shape = MaterialTheme.shapes.small, onClick = vm::retry) { Text(stringResource(R.string.retry)) }
+                        else if (!endReached) TextButton(shape = MaterialTheme.shapes.small, onClick = vm::loadMore) { Text(stringResource(R.string.load_more)) }
                     }
                 }
             }

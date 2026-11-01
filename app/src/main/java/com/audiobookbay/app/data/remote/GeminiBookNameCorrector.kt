@@ -62,14 +62,16 @@ class GeminiBookNameCorrector @Inject constructor(
     }
 }
 
-private suspend fun Call.awaitBody(): String = suspendCancellableCoroutine { continuation ->
+internal class GeminiHttpException(val status: Int) : IOException("AI request failed")
+
+internal suspend fun Call.awaitBody(): String = suspendCancellableCoroutine { continuation ->
     continuation.invokeOnCancellation { cancel() }
     enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) { continuation.resumeWithException(e) }
         override fun onResponse(call: Call, response: Response) {
             response.use {
                 try {
-                    check(it.isSuccessful) { "Name correction request failed" }
+                    if (!it.isSuccessful) throw GeminiHttpException(it.code)
                     val body = checkNotNull(it.body)
                     require(body.contentLength() <= 65_536) { "Response too large" }
                     val source = body.source()

@@ -22,7 +22,7 @@ import androidx.lifecycle.viewModelScope
 import com.audiobookbay.app.BuildConfig
 import com.audiobookbay.app.R
 import com.audiobookbay.app.domain.repository.*
-import com.audiobookbay.app.ui.components.GlassPanel
+import com.audiobookbay.app.ui.components.EditorialPanel
 import com.audiobookbay.app.ui.components.SectionHeading
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -86,7 +86,7 @@ fun AppUpdateCard(
     state: AppUpdateState, preparing: Boolean, installError: Boolean,
     onCheck: () -> Unit, onDownload: () -> Unit, onCancel: () -> Unit, onInstall: () -> Unit,
 ) {
-    GlassPanel(Modifier.fillMaxWidth()) {
+    EditorialPanel(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionHeading(stringResource(R.string.updates_title))
             Text(stringResource(R.string.updates_installed, BuildConfig.VERSION_NAME))
@@ -95,7 +95,7 @@ fun AppUpdateCard(
                 Text(stringResource(R.string.updates_available, update.version), style = MaterialTheme.typography.titleMedium)
                 if (update.notes.isNotBlank()) {
                     var expanded by remember(update.version) { mutableStateOf(false) }
-                    TextButton(onClick = { expanded = !expanded }) { Text(stringResource(R.string.updates_notes)) }
+                    TextButton(shape = MaterialTheme.shapes.small, onClick = { expanded = !expanded }) { Text(stringResource(R.string.updates_notes)) }
                     if (expanded) SelectionContainer { Text(update.notes, style = MaterialTheme.typography.bodySmall) }
                 }
             }
@@ -106,22 +106,22 @@ fun AppUpdateCard(
                     val size = state.update?.size?.coerceAtLeast(1) ?: 1
                     LinearProgressIndicator(progress = { (state.downloaded.toFloat() / size).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
                     Text(stringResource(R.string.updates_progress, (state.downloaded * 100 / size).toInt()))
-                    TextButton(onClick = onCancel) { Text(stringResource(R.string.updates_cancel)) }
+                    TextButton(shape = MaterialTheme.shapes.small, onClick = onCancel) { Text(stringResource(R.string.updates_cancel)) }
                 }
                 UpdatePhase.READY -> {
                     Text(stringResource(R.string.updates_ready))
-                    Button(onClick = onInstall, enabled = !preparing) { Text(stringResource(R.string.updates_install)) }
+                    Button(shape = MaterialTheme.shapes.small, onClick = onInstall, enabled = !preparing) { Text(stringResource(R.string.updates_install)) }
                 }
                 else -> Unit
             }
             if (state.phase == UpdatePhase.AVAILABLE || state.phase == UpdatePhase.ERROR && state.update != null) {
-                Button(onClick = onDownload) { Text(stringResource(R.string.updates_download)) }
+                Button(shape = MaterialTheme.shapes.small, onClick = onDownload) { Text(stringResource(R.string.updates_download)) }
             }
             if (state.phase == UpdatePhase.ERROR) Text(stringResource(updateErrorString(state.error)), color = MaterialTheme.colorScheme.error)
             if (installError) Text(stringResource(R.string.updates_install_error), color = MaterialTheme.colorScheme.error)
             if (preparing) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (state.phase !in setOf(UpdatePhase.DOWNLOADING, UpdatePhase.CHECKING, UpdatePhase.READY)) {
-                OutlinedButton(onClick = onCheck) { Text(stringResource(R.string.updates_check)) }
+                OutlinedButton(shape = MaterialTheme.shapes.small, onClick = onCheck) { Text(stringResource(R.string.updates_check)) }
             }
         }
     }
@@ -146,9 +146,9 @@ fun AppUpdateAnnouncement(updates: AppUpdateRepository) {
         AlertDialog(onDismissRequest = updates::dismissAnnouncement,
             title = { Text(stringResource(R.string.updates_available, update.version)) },
             text = { Text(stringResource(R.string.updates_announcement)) },
-            confirmButton = { TextButton(onClick = { updates.dismissAnnouncement(); updates.download() }) {
+            confirmButton = { TextButton(shape = MaterialTheme.shapes.small, onClick = { updates.dismissAnnouncement(); updates.download() }) {
                 Text(stringResource(R.string.updates_download))
             } },
-            dismissButton = { TextButton(onClick = updates::dismissAnnouncement) { Text(stringResource(R.string.updates_later)) } })
+            dismissButton = { TextButton(shape = MaterialTheme.shapes.small, onClick = updates::dismissAnnouncement) { Text(stringResource(R.string.updates_later)) } })
     }
 }

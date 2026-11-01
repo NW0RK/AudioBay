@@ -8,6 +8,13 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DownloadDao {
+    @Query("SELECT * FROM download_history ORDER BY completedAt DESC")
+    fun observeHistory(): Flow<List<com.audiobookbay.app.data.local.entity.DownloadHistoryEntity>>
+    @Query("DELETE FROM download_history")
+    suspend fun clearHistory()
+    @Upsert
+    suspend fun recordHistory(item: com.audiobookbay.app.data.local.entity.DownloadHistoryEntity)
+
 
     @Query("SELECT * FROM downloads ORDER BY addedTimestamp DESC")
     fun observeAllDownloads(): Flow<List<DownloadEntity>>

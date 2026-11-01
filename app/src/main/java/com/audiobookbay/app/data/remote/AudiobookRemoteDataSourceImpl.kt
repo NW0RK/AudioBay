@@ -63,6 +63,17 @@ class AudiobookRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    suspend fun discoverySearch(query: String): Resource<List<Audiobook>> = withContext(ioDispatcher) {
+        try {
+            val normalized = normalizeSearchQuery(query)
+            val encoded = java.net.URLEncoder.encode(normalized, "UTF-8")
+            val books = fetchSearchListing("$currentBaseUrl/?s=$encoded", normalized)
+                ?: libriVoxBooks { libriVoxApi.searchAudiobooks(title = "^${query.trim()}", offset = 0) }
+            Resource.Success(books)
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { Resource.Error("Catalog unavailable") }
+    }
+
     override suspend fun searchAudiobooks(query: String, page: Int): Resource<List<Audiobook>> = withContext(ioDispatcher) {
         require(page > 0)
         try {

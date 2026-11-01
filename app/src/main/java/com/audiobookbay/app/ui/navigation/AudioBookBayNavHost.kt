@@ -44,8 +44,7 @@ fun AudioBookBayNavHost() {
                         navController.navigateToTab(route)
                     },
                     modifier = Modifier.navigationBarsPadding()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 20.dp, top = 8.dp),
+                        .padding(top = 0.dp),
                 )
             }
         },
@@ -53,11 +52,14 @@ fun AudioBookBayNavHost() {
         NavHost(
             navController = navController,
             startDestination = NavRoute.Home,
+            enterTransition = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) },
+            exitTransition = { androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) },
             modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
         ) {
             composable<NavRoute.Home> {
                 HomeScreen(
                     resetToken = homeResetToken,
+                    onSettings = { navController.navigateToTab(NavRoute.Settings) },
                     onCategory = { navController.navigate(NavRoute.Categories(it)) },
                     onDownload = { navController.navigate(NavRoute.Downloads(it)) },
                     onNavigateToDetail = { id ->

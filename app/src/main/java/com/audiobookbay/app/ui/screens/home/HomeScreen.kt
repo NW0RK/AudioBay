@@ -38,12 +38,18 @@ import com.audiobookbay.app.domain.model.*
 import com.audiobookbay.app.ui.components.*
 
 @Composable
-fun HomeScreen(onNavigateToDetail: (String) -> Unit, resetToken: Int = 0, onCategory: (String?) -> Unit = {}, onDownload: (String?) -> Unit = {}) {
+fun HomeScreen(onNavigateToDetail: (String) -> Unit, resetToken: Int = 0, onCategory: (String?) -> Unit = {}, onDownload: (String?) -> Unit = {}, onSettings: () -> Unit = {}) {
     val vm: HomeViewModel = hiltViewModel()
     val state by vm.uiState.collectAsStateWithLifecycle()
     val categories by vm.categories.collectAsStateWithLifecycle()
     val actions = rememberCatalogActions()
-    HomeScreen(state, vm::refresh, vm::loadMore, vm::retry, onNavigateToDetail, resetToken, categories, onCategory, actions, onDownload)
+    val picks by (vm.discovery?.picks ?: kotlinx.coroutines.flow.MutableStateFlow(emptyList())).collectAsStateWithLifecycle()
+    val history by (vm.discovery?.history ?: kotlinx.coroutines.flow.flowOf(emptyList())).collectAsStateWithLifecycle(initialValue = emptyList())
+    val available by (vm.discovery?.available ?: kotlinx.coroutines.flow.flowOf(false)).collectAsStateWithLifecycle(initialValue = false)
+    val generating by vm.generating.collectAsStateWithLifecycle()
+    val failed by vm.discoveryError.collectAsStateWithLifecycle()
+    HomeScreen(state, vm::refresh, vm::loadMore, vm::retry, onNavigateToDetail, resetToken, categories, onCategory, actions, onDownload,
+        discoveryHeader = { DiscoverySection(picks, history.isNotEmpty(), available, generating, failed, vm::generatePicks, onSettings, onNavigateToDetail) })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,6 +59,7 @@ fun HomeScreen(
     onNavigateToDetail: (String) -> Unit, resetToken: Int = 0,
     categories: List<Category> = emptyList(), onCategory: (String?) -> Unit = {},
     actions: CatalogActions? = null, onDownload: (String?) -> Unit = {},
+    discoveryHeader: @Composable () -> Unit = {},
 ) {
     val content = (state as? UiState.Success)?.data
     val grid = rememberLazyGridState()
@@ -70,12 +77,13 @@ fun HomeScreen(
     Column(Modifier.fillMaxSize()) {
         CatalogSaveError(actions)
         Column(Modifier.padding(horizontal = 24.dp, vertical = 20.dp)) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge)
-            Text(stringResource(R.string.discover_title), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.discovery_editorial), style = MaterialTheme.typography.headlineLarge)
         }
         PullToRefreshBox(isRefreshing = content?.isRefreshing == true, onRefresh = onRefresh) {
             LazyVerticalGrid(columns = GridCells.Fixed(2), state = grid, modifier = Modifier.fillMaxSize().testTag("discovery_grid"),
                 contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                item(span = { GridItemSpan(maxLineSpan) }) { discoveryHeader() }
                 when (state) {
                     UiState.Idle, UiState.Loading -> item(span = { GridItemSpan(maxLineSpan) }) { LinearProgressIndicator(Modifier.fillMaxWidth()) }
                     is UiState.Error -> item(span = { GridItemSpan(maxLineSpan) }) {
@@ -86,21 +94,11 @@ fun HomeScreen(
                             MessageState(stringResource(R.string.discovery_empty), stringResource(R.string.catalog_empty_hint), stringResource(R.string.retry), onRefresh)
                         } else {
                             item(span = { GridItemSpan(maxLineSpan) }) {
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    SectionHeading(stringResource(R.string.featured_shelf))
-                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
-                                        items(state.data.books.take(6), key = { "${it.source}:${it.id}" }) { book ->
-                                            FeaturedHero(book, actions, onDownload, onNavigateToDetail, Modifier.width(300.dp))
-                                        }
-                                    }
-                                }
-                            }
-                            item(span = { GridItemSpan(maxLineSpan) }) {
                                 Column {
                                     SectionHeading(stringResource(R.string.recently_added))
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                         items(state.data.books.take(12), key = { "${it.source}:${it.id}" }) { book ->
-                                            HomeCard(book, actions, onDownload, onNavigateToDetail, Modifier.width(300.dp), compact = true)
+                                            HomeCard(book, actions, onDownload, onNavigateToDetail, Modifier.width(156.dp), compact = false)
                                         }
                                     }
                                 }
@@ -111,11 +109,11 @@ fun HomeScreen(
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         SectionHeading(stringResource(R.string.categories_title))
-                        TextButton(onClick = { onCategory(null) }) { Text(stringResource(R.string.browse_all)) }
+                        TextButton(shape = MaterialTheme.shapes.small, onClick = { onCategory(null) }) { Text(stringResource(R.string.browse_all)) }
                     }
                 }
                 items(categories.take(6), key = { it.slug }) { category ->
-                    FilledTonalButton(onClick = { onCategory(category.slug) }, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text(category.displayName) }
+                    OutlinedButton(shape = MaterialTheme.shapes.small, onClick = { onCategory(category.slug) }, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text(category.displayName) }
                 }
                 if (content != null) {
                     item(span = { GridItemSpan(maxLineSpan) }) { SectionHeading(stringResource(R.string.catalog_shelf)) }
@@ -124,9 +122,9 @@ fun HomeScreen(
                     }
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         when {
-                            content.hasError -> TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+                            content.hasError -> TextButton(shape = MaterialTheme.shapes.small, onClick = onRetry) { Text(stringResource(R.string.retry)) }
                             content.isLoadingMore -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                            !content.endReached -> TextButton(onClick = onLoadMore) { Text(stringResource(R.string.load_more)) }
+                            !content.endReached -> TextButton(shape = MaterialTheme.shapes.small, onClick = onLoadMore) { Text(stringResource(R.string.load_more)) }
                         }
                     }
                 }
@@ -139,77 +137,4 @@ private fun HomeCard(book: Audiobook, actions: CatalogActions?, onDownload: (Str
     val state = actions?.state(book) ?: BookCardState()
     AudiobookCard(book, modifier, compact, state, onSave = { actions?.toggle(book) },
         onDownload = { onDownload(if (state.download == null) book.id else null) }, onClick = { onDetail(book.id) })
-}
-
-@Composable
-private fun FeaturedHero(book: Audiobook, actions: CatalogActions?, onDownload: (String?) -> Unit, onDetail: (String) -> Unit, modifier: Modifier) {
-    val state = actions?.state(book) ?: BookCardState()
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, tween(160), label = "Hero press")
-    Box(modifier
-        .aspectRatio(0.82f)
-        .graphicsLayer { scaleX = scale; scaleY = scale }
-        .clip(RoundedCornerShape(20.dp))
-        .clickable(interactionSource = interaction, indication = null, onClick = { onDetail(book.id) })) {
-        AsyncImage(
-            model = book.coverImageUrl,
-            contentDescription = null,
-            placeholder = painterResource(R.drawable.cover_placeholder),
-            error = painterResource(R.drawable.cover_placeholder),
-            fallback = painterResource(R.drawable.cover_placeholder),
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0.45f to MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                        1f to MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-                    ),
-                ),
-        )
-        Row(
-            Modifier.align(Alignment.TopEnd).padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            IconButton(onClick = { actions?.toggle(book) }, enabled = state.saveEnabled, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    if (state.saved) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                    stringResource(if (state.saved) R.string.unsave_book else R.string.save_book, book.title),
-                    Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            IconButton(onClick = { onDownload(if (state.download == null) book.id else null) }, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Outlined.FileDownload,
-                    stringResource(if (state.download != null) R.string.view_book_download else R.string.prepare_book_download, book.title),
-                    Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-        Column(
-            Modifier.align(Alignment.BottomStart).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                book.title,
-                style = MaterialTheme.typography.titleLarge,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                book.author,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
 }

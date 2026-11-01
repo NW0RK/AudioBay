@@ -20,23 +20,21 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 
-/** A translucent highlight and a fine rim keep panels light against the ink or parchment canvas. */
+/** Opaque editorial grouping shared by settings, downloads and catalog rows. */
 @Composable
-fun GlassPanel(
+fun EditorialPanel(
     modifier: Modifier = Modifier,
     shape: Shape = MaterialTheme.shapes.large,
     content: @Composable () -> Unit,
 ) {
-    Box(modifier.clip(shape).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.96f))
-        .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.015f))))
-        .border(1.dp, Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.035f))), shape)) {
+    Box(modifier.clip(shape).background(MaterialTheme.colorScheme.surfaceContainerLow)) {
         content()
     }
 }
 
 /** Blur only the artwork, leaving the icon and accessible touch target crisp. */
 @Composable
-fun GlassActionButton(
+fun EditorialActionButton(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
@@ -45,18 +43,10 @@ fun GlassActionButton(
     enabled: Boolean = true,
     subtleArtwork: Boolean = false,
 ) {
-    Box(modifier.size(88.dp).clip(CircleShape)
+    Box(modifier.size(56.dp).clip(MaterialTheme.shapes.small)
         .background(MaterialTheme.colorScheme.surface)
         .clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center) {
-        AsyncImage(model = coverUrl, contentDescription = null, contentScale = ContentScale.Crop,
-            modifier = Modifier.matchParentSize().blur(if (subtleArtwork) 6.dp else 24.dp))
-        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = if (subtleArtwork) 0.12f else 0.42f),
-            MaterialTheme.colorScheme.surface.copy(alpha = if (subtleArtwork) 0.58f else 0.82f),
-        ))))
-        Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f), Color.Transparent)))
-            .border(1.dp, Brush.linearGradient(listOf(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))), CircleShape))
         Icon(icon, label, Modifier.size(32.dp), tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
     }
 }

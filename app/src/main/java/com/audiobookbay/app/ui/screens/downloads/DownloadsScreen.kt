@@ -9,7 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.audiobookbay.app.data.storage.DownloadFolderSettings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import com.audiobookbay.app.ui.components.GlassPanel
+import com.audiobookbay.app.ui.components.EditorialPanel
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -96,7 +96,7 @@ fun DownloadsScreen(onBrowse: () -> Unit = {}) {
                 is UiState.Success -> {
                     if (result.data.isEmpty()) item { com.audiobookbay.app.ui.components.MessageState(stringResource(R.string.no_downloads), stringResource(R.string.download_empty_hint), stringResource(R.string.browse_audiobooks), onBrowse) }
                     items(result.data, key = { it.id }) { download ->
-                        GlassPanel(Modifier.fillMaxWidth()) {
+                        EditorialPanel(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(download.title, style = MaterialTheme.typography.titleLarge)
                                 download.author?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -114,19 +114,19 @@ fun DownloadsScreen(onBrowse: () -> Unit = {}) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     when {
                                         download.status in setOf(DownloadStatus.PAUSED, DownloadStatus.ERROR, DownloadStatus.PUBLICATION_FAILED, DownloadStatus.WAITING_FOR_WIFI) || (download.status == DownloadStatus.COMPLETED && download.publishedFolderUri == null) ->
-                                            TextButton(onClick = { vm.resume(download) }, enabled = !busy) { Text(stringResource(R.string.resume)) }
+                                            TextButton(shape = MaterialTheme.shapes.small, onClick = { vm.resume(download) }, enabled = !busy) { Text(stringResource(R.string.resume)) }
                                         download.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING) ->
-                                            TextButton(onClick = { vm.pause(download.infoHash) }, enabled = !busy) { Text(stringResource(R.string.pause)) }
+                                            TextButton(shape = MaterialTheme.shapes.small, onClick = { vm.pause(download.infoHash) }, enabled = !busy) { Text(stringResource(R.string.pause)) }
                                     }
                                     download.publishedFolderUri?.let { uri ->
-                                        TextButton(onClick = {
+                                        TextButton(shape = MaterialTheme.shapes.small, onClick = {
                                             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(uri), "vnd.android.document/directory").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) }
                                                 .onFailure { android.widget.Toast.makeText(context, R.string.open_folder_hint, android.widget.Toast.LENGTH_LONG).show() }
                                         }) { Text(stringResource(R.string.open_folder)) }
                                     }
                                     Box {
                                         var menu by remember { mutableStateOf(false) }
-                                        IconButton(onClick = { menu = true }) { Icon(androidx.compose.material.icons.Icons.Default.MoreVert, stringResource(R.string.more_actions)) }
+                                        IconButton(shape = MaterialTheme.shapes.small, onClick = { menu = true }) { Icon(androidx.compose.material.icons.Icons.Default.MoreVert, stringResource(R.string.more_actions)) }
                                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                                             if (download.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.WAITING_FOR_WIFI, DownloadStatus.ERROR)) {
                                                 DropdownMenuItem(text = { Text(stringResource(R.string.select_files)) }, enabled = !busy, onClick = { menu = false; vm.showFiles(download) })
@@ -172,11 +172,11 @@ fun DownloadsScreen(onBrowse: () -> Unit = {}) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { vm.applyFiles(checked) }, enabled = checked.isNotEmpty() && !busy) {
+                TextButton(shape = MaterialTheme.shapes.small, onClick = { vm.applyFiles(checked) }, enabled = checked.isNotEmpty() && !busy) {
                     Text(stringResource(R.string.apply))
                 }
             },
-            dismissButton = { TextButton(onClick = vm::dismissFiles) { Text(stringResource(R.string.cancel_edit)) } },
+            dismissButton = { TextButton(shape = MaterialTheme.shapes.small, onClick = vm::dismissFiles) { Text(stringResource(R.string.cancel_edit)) } },
         )
     }
 }

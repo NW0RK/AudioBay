@@ -25,20 +25,20 @@ fun SaveBookControl(book: Audiobook, vm: SavedViewModel = hiltViewModel()) {
     val saved = (state as? UiState.Success)?.data?.any { it.id == book.id && it.source == book.source } == true
     val failed by vm.failedBook.collectAsStateWithLifecycle()
     Column {
-        IconButton(onClick = { vm.change(book, !saved) }, enabled = state is UiState.Success) {
+        IconButton(shape = MaterialTheme.shapes.small, onClick = { vm.change(book, !saved) }, enabled = state is UiState.Success) {
             Icon(if (saved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 stringResource(if (saved) R.string.unsave_book else R.string.save_book, book.title))
         }
         if (failed?.id == book.id && failed?.source == book.source) {
             Text(stringResource(R.string.saved_update_error), style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = vm::retryChange) { Text(stringResource(R.string.retry)) }
+            TextButton(shape = MaterialTheme.shapes.small, onClick = vm::retryChange) { Text(stringResource(R.string.retry)) }
         }
-        if (state is UiState.Error) TextButton(onClick = vm::retryLoad) { Text(stringResource(R.string.saved_load_retry)) }
+        if (state is UiState.Error) TextButton(shape = MaterialTheme.shapes.small, onClick = vm::retryLoad) { Text(stringResource(R.string.saved_load_retry)) }
     }
 }
 @Composable
 fun BookSummaryMetadata(book: Audiobook) {
-    val summary = listOfNotNull(book.language, book.audioFormat, book.formattedSize).filter { it.isNotBlank() }.joinToString(" � ")
+    val summary = listOfNotNull(book.language, book.audioFormat, book.formattedSize).filter { it.isNotBlank() }.joinToString(" · ")
     if (summary.isNotEmpty()) Text(summary, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 }
 enum class SavedSort { Recent, Title, Author }
@@ -64,7 +64,7 @@ fun SavedContent(state: UiState<List<Audiobook>>, onRetry: () -> Unit, onBrowse:
         Text(stringResource(R.string.nav_saved), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(vertical = 16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Box {
-                TextButton(onClick = { sortMenu = true }) {
+                TextButton(shape = MaterialTheme.shapes.small, onClick = { sortMenu = true }) {
                     Text(stringResource(when (sort) { SavedSort.Recent -> R.string.sort_recent; SavedSort.Title -> R.string.sort_title; SavedSort.Author -> R.string.sort_author }))
                 }
                 DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {

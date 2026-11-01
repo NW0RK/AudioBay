@@ -17,7 +17,7 @@ fun DownloadFolderPicker(label: String, selected: Boolean, enabled: Boolean = tr
         Text(stringResource(R.string.download_folder), style = MaterialTheme.typography.titleSmall)
         Text(label, style = MaterialTheme.typography.bodyMedium)
         Text(stringResource(R.string.folder_structure), style = MaterialTheme.typography.bodySmall)
-        OutlinedButton(onClick = { picker.launch(DownloadFolderSettings.initialUri) }, enabled = enabled) {
+        OutlinedButton(shape = MaterialTheme.shapes.small, onClick = { picker.launch(DownloadFolderSettings.initialUri) }, enabled = enabled) {
             Text(stringResource(if (selected) R.string.change_folder else R.string.choose_folder))
         }
         if (!selected) Text(stringResource(R.string.folder_setup_hint), style = MaterialTheme.typography.bodySmall)

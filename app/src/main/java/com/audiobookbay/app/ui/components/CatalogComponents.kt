@@ -43,7 +43,7 @@ fun MessageState(heading: String, message: String, action: String, onAction: () 
         Icon(if (error) Icons.Outlined.CloudOff else Icons.Outlined.AutoStories, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
         Text(heading, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Text(message, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Button(onClick = onAction) { Text(action) }
+        Button(shape = MaterialTheme.shapes.small, onClick = onAction) { Text(action) }
     }
 }
 
@@ -102,9 +102,9 @@ fun AudiobookCard(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.98f else 1f, tween(140), label = "Cover press")
-    val alpha by animateFloatAsState(if (pressed) 0.90f else 1f, tween(140), label = "Cover feedback")
-    GlassPanel(modifier.graphicsLayer { scaleX = scale; scaleY = scale; this.alpha = alpha }
+    val scale by animateFloatAsState(1f, tween(140), label = "Cover press")
+    val alpha by animateFloatAsState(if (pressed) 0.96f else 1f, tween(140), label = "Cover feedback")
+    Box(modifier.graphicsLayer { scaleX = scale; scaleY = scale; this.alpha = alpha }
         .clickable(interactionSource = interaction, indication = null, onClick = onClick)) {
         if (compact) {
             Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -114,7 +114,7 @@ fun AudiobookCard(
         } else {
             Column {
                 Box {
-                    BookCover(book, Modifier.fillMaxWidth().aspectRatio(0.75f))
+                    BookCover(book, Modifier.fillMaxWidth().aspectRatio(1f))
                     state.download?.let { DownloadProgress(it, Modifier.align(Alignment.BottomCenter)) }
                 }
                 BookCardText(book, state, onSave, onDownload, Modifier.padding(12.dp))
@@ -127,7 +127,7 @@ fun AudiobookCard(
 private fun BookCover(book: Audiobook, modifier: Modifier) {
     AsyncImage(model = book.coverImageUrl, contentDescription = null,
         placeholder = painterResource(R.drawable.cover_placeholder), error = painterResource(R.drawable.cover_placeholder), fallback = painterResource(R.drawable.cover_placeholder),
-        contentScale = ContentScale.Crop, modifier = modifier.clip(RoundedCornerShape(12.dp)))
+        contentScale = ContentScale.Fit, modifier = modifier.clip(RoundedCornerShape(6.dp)))
 }
 @Composable
 private fun BookCardText(book: Audiobook, state: BookCardState, onSave: () -> Unit, onDownload: () -> Unit, modifier: Modifier, compact: Boolean = false) {
@@ -140,24 +140,24 @@ private fun BookCardText(book: Audiobook, state: BookCardState, onSave: () -> Un
             if (compact) DownloadProgress(it)
         }
         Row {
-            IconButton(onClick = onSave, enabled = state.saveEnabled) {
+            IconButton(shape = MaterialTheme.shapes.small, onClick = onSave, enabled = state.saveEnabled) {
                 Icon(if (state.saved) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
                     stringResource(if (state.saved) R.string.unsave_book else R.string.save_book, book.title))
             }
-            IconButton(onClick = onDownload) {
+            IconButton(shape = MaterialTheme.shapes.small, onClick = onDownload) {
                 Icon(Icons.Outlined.FileDownload, stringResource(if (state.download != null) R.string.view_book_download else R.string.prepare_book_download, book.title))
             }
         }
         if (state.saveFailed) {
             Text(stringResource(R.string.saved_update_error), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = onSave) { Text(stringResource(R.string.retry)) }
+            TextButton(shape = MaterialTheme.shapes.small, onClick = onSave) { Text(stringResource(R.string.retry)) }
         }
     }
 }
 
 @Composable
 fun CatalogSaveError(actions: CatalogActions?) {
-    if (actions?.loadFailed == true) TextButton(onClick = actions.retryLoad) { Text(stringResource(R.string.saved_load_retry)) }
+    if (actions?.loadFailed == true) TextButton(shape = MaterialTheme.shapes.small, onClick = actions.retryLoad) { Text(stringResource(R.string.saved_load_retry)) }
 }
 
 @Composable

@@ -27,12 +27,12 @@ fun CategoriesScreen(onNavigateToDetail: (String) -> Unit, onDownload: (String?)
     Column(Modifier.fillMaxSize()) {
         CatalogSaveError(actions)
         TopAppBar(title = { Text(state.categories.firstOrNull { it.slug == state.slug }?.displayName ?: stringResource(R.string.categories_title)) },
-            navigationIcon = { IconButton(onClick = { if (state.slug != null) vm.select(null) else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } })
+            navigationIcon = { IconButton(shape = MaterialTheme.shapes.small, onClick = { if (state.slug != null) vm.select(null) else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } })
         LazyVerticalGrid(columns = GridCells.Adaptive(156.dp), state = grid, contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (state.slug == null) {
                 items(state.categories, key = { it.slug }) { category ->
-                    FilledTonalButton(onClick = { vm.select(category.slug) }, modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp)) { Text(category.displayName) }
+                    FilledTonalButton(shape = MaterialTheme.shapes.small, onClick = { vm.select(category.slug) }, modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp)) { Text(category.displayName) }
                 }
             } else {
                 items(state.books, key = { "${it.source}:${it.id}" }) { book ->
@@ -46,7 +46,7 @@ fun CategoriesScreen(onNavigateToDetail: (String) -> Unit, onDownload: (String?)
                     state.loading -> LinearProgressIndicator(Modifier.fillMaxWidth())
                     state.failed -> MessageState(stringResource(R.string.discovery_error), stringResource(R.string.catalog_error_hint), stringResource(R.string.retry), vm::retry, error = true)
                     state.slug != null && state.books.isEmpty() -> MessageState(stringResource(R.string.discovery_empty), stringResource(R.string.category_empty_hint), stringResource(R.string.categories_title), { vm.select(null) })
-                    state.slug != null && !state.endReached -> TextButton(onClick = vm::loadMore) { Text(stringResource(R.string.load_more)) }
+                    state.slug != null && !state.endReached -> TextButton(shape = MaterialTheme.shapes.small, onClick = vm::loadMore) { Text(stringResource(R.string.load_more)) }
                 }
             }
         }

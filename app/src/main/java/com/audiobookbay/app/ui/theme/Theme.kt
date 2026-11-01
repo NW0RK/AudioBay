@@ -13,8 +13,8 @@ import androidx.compose.ui.unit.sp
 import com.audiobookbay.app.R
 
 // Ordered dark-to-light ramps; surfaces and controls share the same tonal foundation.
-internal val InkRamp = listOf(0xFF101213, 0xFF191B1C, 0xFF222425, 0xFF2C2E2E, 0xFF373939, 0xFF747571, 0xFFCBC7BE, 0xFFE8E2D8, 0xFFF2ECE2, 0xFFFAF6EE).map { Color(it) }
-internal val AmberRamp = listOf(0xFF281900, 0xFF432D00, 0xFF614100, 0xFF805500, 0xFFA87313, 0xFFD1952B, 0xFFF2B544, 0xFFFFD995, 0xFFFFEBC7, 0xFFFFF7E9).map { Color(it) }
+internal val InkRamp = listOf(0xFF101213, 0xFF121315, 0xFF1C1E21, 0xFF2C2E2E, 0xFF373939, 0xFF747571, 0xFFCBC7BE, 0xFFE8E2D8, 0xFFF4F0E7, 0xFFFAF6EE).map { Color(it) }
+internal val AmberRamp = listOf(0xFF281900, 0xFF432D00, 0xFF614100, 0xFF805500, 0xFFA87313, 0xFFD1952B, 0xFFFFB24A, 0xFFFFD995, 0xFFFFEBC7, 0xFFFFF7E9).map { Color(it) }
 internal val NeutralRamp = listOf(0xFF211C14, 0xFF383026, 0xFF51473A, 0xFF6B6052, 0xFF867969, 0xFFA39785, 0xFFC1B5A2, 0xFFE0D2BE, 0xFFF0E3CF, 0xFFFFF8EF).map { Color(it) }
 internal val TealRamp = listOf(0xFF00201C, 0xFF103C35, 0xFF24544B, 0xFF3D6D63, 0xFF56877C, 0xFF71A296, 0xFF8DBEB1, 0xFFA9DACD, 0xFFC5F7E9, 0xFFE8FFF7).map { Color(it) }
 
@@ -61,9 +61,16 @@ private fun semanticColors(dark: Boolean, scheme: ColorScheme) = SemanticColors(
 )
 val LocalSemanticColors = staticCompositionLocalOf { semanticColors(true, DarkColorScheme) }
 
+@OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+private val Manrope = FontFamily(
+    Font(R.font.manrope, FontWeight.Normal, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
+    Font(R.font.manrope, FontWeight.Medium, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
+    Font(R.font.manrope, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
+    Font(R.font.manrope, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
+)
 private val Lora = FontFamily(Font(R.font.lora, FontWeight.Normal), Font(R.font.lora, FontWeight.Medium), Font(R.font.lora, FontWeight.SemiBold))
-private fun title(size: Int, weight: FontWeight = FontWeight.Medium) = TextStyle(fontFamily = Lora, fontWeight = weight, fontSize = size.sp, lineHeight = (size * 1.2f).sp)
-private fun body(size: Int, weight: FontWeight = FontWeight.Normal) = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = weight, fontSize = size.sp, lineHeight = (size * 1.5f).sp)
+private fun title(size: Int, weight: FontWeight = FontWeight.Medium) = TextStyle(fontFamily = Manrope, fontWeight = weight, fontSize = size.sp, lineHeight = (size * 1.2f).sp)
+private fun body(size: Int, weight: FontWeight = FontWeight.Normal) = TextStyle(fontFamily = Manrope, fontWeight = weight, fontSize = size.sp, lineHeight = (size * 1.5f).sp)
 val LiteraryTypography = Typography(
     displayLarge = title(57), displayMedium = title(45), displaySmall = title(36),
     headlineLarge = title(32, FontWeight.SemiBold), headlineMedium = title(28), headlineSmall = title(24),
@@ -72,12 +79,13 @@ val LiteraryTypography = Typography(
     labelLarge = body(14, FontWeight.Medium), labelMedium = body(12, FontWeight.Medium), labelSmall = body(11, FontWeight.Medium),
 )
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun AudioBookBayTheme(darkTheme: Boolean = true, dynamicColor: Boolean = false, content: @Composable () -> Unit) {
     val scheme = if (dynamicColor && Build.VERSION.SDK_INT >= 31) {
         if (darkTheme) dynamicDarkColorScheme(LocalContext.current) else dynamicLightColorScheme(LocalContext.current)
     } else if (darkTheme) DarkColorScheme else LightColorScheme
-    CompositionLocalProvider(LocalSemanticColors provides semanticColors(darkTheme, scheme)) {
+    CompositionLocalProvider(LocalRippleConfiguration provides null, androidx.compose.foundation.LocalIndication provides com.audiobookbay.app.ui.components.QuietIndication, LocalSemanticColors provides semanticColors(darkTheme, scheme)) {
         MaterialTheme(colorScheme = scheme, typography = LiteraryTypography,
-            shapes = Shapes(small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(28.dp)), content = content)
+            shapes = Shapes(small = RoundedCornerShape(6.dp), medium = RoundedCornerShape(10.dp), large = RoundedCornerShape(12.dp)), content = content)
     }
 }

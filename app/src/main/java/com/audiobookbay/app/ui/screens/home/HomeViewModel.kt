@@ -25,9 +25,23 @@ data class HomeContent(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: AudiobookRepository,
+    val discovery: com.audiobookbay.app.domain.repository.RecommendationRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<UiState<HomeContent>>(UiState.Loading)
     val uiState = _uiState.asStateFlow()
+    private val _generating = MutableStateFlow(false)
+    val generating = _generating.asStateFlow()
+    private val _discoveryError = MutableStateFlow<String?>(null)
+    val discoveryError = _discoveryError.asStateFlow()
+    fun generatePicks() {
+        if (_generating.value || discovery == null) return
+        _generating.value = true
+        _discoveryError.value = null
+        viewModelScope.launch {
+            try { _discoveryError.value = (discovery.generate() as? Resource.Error)?.message }
+            finally { _generating.value = false }
+        }
+    }
     private var page = 0
     private var failedPage = 1
     private var request: Job? = null
@@ -35,6 +49,7 @@ class HomeViewModel @Inject constructor(
     private val _categories = MutableStateFlow<List<com.audiobookbay.app.domain.model.Category>>(emptyList())
     val categories = _categories.asStateFlow()
     init {
+        viewModelScope.launch { discovery?.restore() }
         refresh()
         viewModelScope.launch {
             try {
