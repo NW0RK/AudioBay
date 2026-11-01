@@ -20,13 +20,7 @@ sealed interface NavRoute {
     data class AudiobookDetail(val audiobookId: String) : NavRoute
 
     @Serializable
-    data object Downloads : NavRoute
-
-    @Serializable
-    data object Library : NavRoute
-
-    @Serializable
-    data object NowPlaying : NavRoute
+    data class Downloads(val audiobookId: String? = null) : NavRoute
 
     @Serializable
     data object Settings : NavRoute

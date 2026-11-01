@@ -8,6 +8,10 @@ import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.audiobookbay.app.data.local.AppDatabase
+import com.audiobookbay.app.domain.model.DownloadMetadata
+import com.audiobookbay.app.data.storage.*
+import com.audiobookbay.app.di.dataStore
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.audiobookbay.app.domain.model.DownloadStatus
 import com.audiobookbay.app.torrent.TorrentDownloadManagerImpl
 import kotlinx.coroutines.*
@@ -38,7 +42,14 @@ class TorrentTransferTest {
         }
         val db = Room.inMemoryDatabaseBuilder(app, AppDatabase::class.java).build()
         val seeder = SessionManager()
-        var manager = TorrentDownloadManagerImpl(testContext, db.downloadDao(), Json, Dispatchers.IO)
+        val shared = File(testRoot, "AudioBooks").apply { mkdirs() }
+        val tree = if (InstrumentationRegistry.getArguments().getString("useConfiguredFolder") == "true") {
+            checkNotNull(app.dataStore.data.first()[stringPreferencesKey("shared_audiobook_folder")]) { "Choose the shared folder in Settings before this test" }
+        } else InstrumentationRegistry.getArguments().getString("publicationTree") ?: shared.path
+        val documentStorage: PublicationStorage = if (tree.startsWith("content:")) SafPublicationStorage(app) else DeviceFileDocuments()
+        fun newManager() = TorrentDownloadManagerImpl(testContext, db.downloadDao(), Json,
+            BookPublisher(File(files, "publication-state"), documentStorage, Json), Dispatchers.IO)
+        var manager = newManager()
         try {
             val seedDir = File(testRoot, "seed").apply { mkdirs() }
             val audio = File(seedDir, "lawful-test.wav")
@@ -55,7 +66,7 @@ class TorrentTransferTest {
             withTimeout(15000) { while (seeder.find(info.infoHash())?.status()?.isSeeding != true) delay(200) }
             seeder.find(info.infoHash()).uploadLimit = 32768
             val magnet = "magnet:?xt=urn:btih:${info.infoHash().toHex()}&dn=lawful-test&x.pe=127.0.0.1:47891"
-            val result = manager.startDownload("test-book", magnet, downloads, null).getOrThrow()
+            val result = manager.startDownload("test-book", magnet, DownloadMetadata("AudioBay Test Author", "Lawful transfer ${System.currentTimeMillis()}", tree), null).getOrThrow()
             withTimeoutOrNull(30000) {
                 manager.observeDownload(result.infoHash).onEach { Timber.i("Local test transfer: $it") }
                     .first { it != null && it.bytesDownloaded > 0 && it.progress < 1f }
@@ -63,17 +74,25 @@ class TorrentTransferTest {
             manager.pauseDownload(result.infoHash).getOrThrow()
             assertEquals(DownloadStatus.PAUSED, manager.observeDownload(result.infoHash).first()?.status)
             manager.shutdown()
-            manager = TorrentDownloadManagerImpl(testContext, db.downloadDao(), Json, Dispatchers.IO)
+            manager = newManager()
             manager.initialize()
             assertEquals(DownloadStatus.PAUSED, manager.observeDownload(result.infoHash).first()?.status)
             manager.resumeDownload(result.infoHash).getOrThrow()
             val completed = withTimeout(60000) {
-                manager.observeDownload(result.infoHash).first { it?.status == DownloadStatus.COMPLETED || it?.status == DownloadStatus.ERROR }
+                manager.observeDownload(result.infoHash).first { it?.status == DownloadStatus.COMPLETED || it?.status == DownloadStatus.ERROR || it?.status == DownloadStatus.PUBLICATION_FAILED }
             }
             assertEquals(completed?.errorMessage, DownloadStatus.COMPLETED, completed?.status)
-            assertArrayEquals(audio.readBytes(), File(downloads, audio.name).readBytes())
+            val published = checkNotNull(completed?.publishedFolderUri)
+            val track = documentStorage.children(published).single { it.name == audio.name }
+            assertArrayEquals(audio.readBytes(), documentStorage.read(track.uri).use { it.readBytes() })
+            assertFalse(File(result.destinationPath).exists())
+            if (InstrumentationRegistry.getArguments().getString("leavePublished") != "true") {
+                documentStorage.delete(published)
+                val author = documentStorage.children(documentStorage.root(tree)).singleOrNull { it.name == "AudioBay Test Author" && it.isDirectory }
+                if (author != null && documentStorage.children(author.uri).isEmpty()) documentStorage.delete(author.uri)
+            }
             manager.shutdown()
-            manager = TorrentDownloadManagerImpl(testContext, db.downloadDao(), Json, Dispatchers.IO)
+            manager = newManager()
             manager.initialize()
             assertEquals(DownloadStatus.COMPLETED, manager.observeDownload(result.infoHash).first()?.status)
             assertTrue(File(files, "torrent-state/${result.infoHash}.resume").isFile)
@@ -85,4 +104,17 @@ class TorrentTransferTest {
             testRoot.deleteRecursively()
         }
     }
+}
+
+/** Fallback for tests without an explicit SAF grant; the real provider is used with publicationTree. */
+private class DeviceFileDocuments : PublicationStorage {
+    override fun root(treeUri: String) = treeUri
+    override fun exists(uri: String) = File(uri).exists()
+    override fun children(parent: String) = File(parent).listFiles().orEmpty().map { PublicationStorage.Document(it.path, it.name, it.isDirectory) }
+    override fun directory(parent: String, name: String) = File(parent, name).also { check(it.mkdir()) }.path
+    override fun file(parent: String, name: String) = File(parent, name).also { check(it.createNewFile()) }.path
+    override fun read(uri: String) = File(uri).inputStream()
+    override fun write(uri: String) = File(uri).outputStream()
+    override fun rename(uri: String, name: String) = File(File(uri).parentFile, name).also { check(!it.exists() && File(uri).renameTo(it)) }.path
+    override fun delete(uri: String) { check(File(uri).deleteRecursively()) }
 }

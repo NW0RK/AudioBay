@@ -323,3 +323,38 @@ Downloads UI accepts a manual magnet or SAF torrent document and delegates to th
 manager. Imports copy at most 10 MiB into temporary cache before the engine stores its
 private copy. Notification permission is requested on user download/import actions.
 Queue removal preserves files. Automatic transfer into the library is the next milestone.
+
+
+## Product revision: downloader only (2026-11-01)
+
+This section supersedes the earlier proposed player/library subsystems. The user
+uses a separate player. Media3, AudioPlaybackService and player/library navigation
+have been removed; the only long-running service is the dataSync download service.
+Legacy playback/bookmark/chapter tables remain as inert compatibility data.
+
+DownloadMetadata now requires author, book title and a destination tree URI. The
+native engine owns app-specific staging paths rather than exposing them as the
+user's final destination. A completed native payload persists a PublicationFile
+manifest and enters PUBLISHING. BookPublisher streams to Android DocumentsContract
+URIs via SafPublicationStorage, verifies SHA-256, journals completed copies, then
+renames its hidden staging book directory into Author/Book Title. Collisions get
+numbered book folders and never replace existing books. Torrent wrappers are removed
+without flattening disc folders. Invalid path segments cannot escape the chosen tree.
+
+DownloadFolderSettings persists the ACTION_OPEN_DOCUMENT_TREE read/write grant and
+validates create/write/rename support. The suggested initial location is Android;
+the user creates/selects AudioBooks underneath it. The connected Android14 phone
+confirmed this exact location is permitted. If an OEM denies it, the UI requires an
+explicit alternative location. No all-files permission or raw shared POSIX path is used.
+
+Room version3 adds author, destinationTreeUri, publishedFolderUri and
+publicationProgress to downloads. Migration2to3 is additive; legacy tables are kept.
+COMPLETED means shared verification succeeded, not simply native transfer completion.
+PUBLICATION_FAILED retains verified staging for retry without torrent downloads.
+Native resume state and publication journals have separate lifetimes. Copying remains
+inside the foreground service's active-work budget; shutdown interrupts it safely.
+
+The publisher's durable file checkpoints support process-independent recreation.
+A per-book marker recovers rename-before-commit interruptions. Low-storage write
+failures retain runtime error state and source audio. Successful publication removes
+owned temporary audio; removing a history entry never deletes the shared audiobook.

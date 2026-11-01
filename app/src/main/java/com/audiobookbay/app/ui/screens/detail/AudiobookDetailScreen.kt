@@ -22,7 +22,7 @@ import com.audiobookbay.app.domain.model.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AudiobookDetailScreen(onNavigateBack: () -> Unit, onNavigateToPlayer: () -> Unit) {
+fun AudiobookDetailScreen(onNavigateBack: () -> Unit, onDownload: (String) -> Unit) {
     val vm: DetailViewModel = hiltViewModel()
     val state by vm.uiState.collectAsStateWithLifecycle()
     var expanded by remember { mutableStateOf(false) }
@@ -71,7 +71,10 @@ fun AudiobookDetailScreen(onNavigateBack: () -> Unit, onNavigateToPlayer: () -> 
                             Text(torrent.infoHash, style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    item { Text(stringResource(R.string.download_not_ready), style = MaterialTheme.typography.bodySmall) }
+                    item {
+                        if (book.torrentInfo?.magnetUri != null) Button(onClick = { onDownload(book.id) }) { Text(stringResource(R.string.start_download)) }
+                        else Text(stringResource(R.string.no_torrent_link), style = MaterialTheme.typography.bodySmall)
+                    }
                     if (book.chapters.isNotEmpty()) {
                         item { Text(stringResource(R.string.chapters_count, book.chapters.size), style = MaterialTheme.typography.titleLarge) }
                         items(book.chapters, key = { it.id }) { chapter -> Text("${chapter.trackNumber}. ${chapter.title}") }

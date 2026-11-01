@@ -173,3 +173,17 @@ Before considering any implementation task complete:
 4. Dependency injection is wired via Hilt.
 5. Code follows Kotlin and Android best practices.
 6. The task in [`docs/TASKS.md`](file:///c:/Users/niko0/Documents/GitHub/AudioBookBayAndroid/docs/TASKS.md) is marked as checked `[x]`.
+
+
+## User-approved product revision — 2026-11-01 (takes precedence above)
+
+This app is now a downloader only. Do not implement or restore a native player,
+Media3 playback service, listening library, bookmarks, sleep timer or mini-player.
+The user listens in a separate app. Keep discovery, search, details, Downloads and
+Settings. Final shared storage defaults to Android/AudioBooks and is selected through
+SAF with a persistent grant; arrange audio as Author/Book Title/tracks, preserving
+disc folders and Unicode. Missing author/title must be requested before downloading.
+libtorrent uses private app-specific staging; publish verified content through SAF,
+checkpoint and verify copies, then delete staging. Completed shared files survive
+queue removal and uninstall. Never silently use an alternate shared root or bypass
+Android folder access restrictions. Legacy Room tables are retained for upgrades.

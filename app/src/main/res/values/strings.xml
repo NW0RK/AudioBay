@@ -24,7 +24,7 @@
     <string name="show_less">Show less</string>
     <string name="chapters_count">Chapters (%1$d)</string>
     <string name="torrent_information">Torrent information</string>
-    <string name="download_not_ready">Downloads and playback are under development.</string>
+    <string name="no_torrent_link">No torrent link is available for this recording.</string>
     <string name="download_channel">Audiobook downloads</string>
     <string name="download_preparing">Preparing downloads…</string>
     <string name="download_notification">%1$d active downloads · %2$s KB/s</string>
@@ -47,4 +47,23 @@
     <string name="download_completed">Completed</string>
     <string name="download_failed">Download failed</string>
     <string name="download_cancelled">Cancelled</string>
+    <string name="download_folder">Audiobook folder</string>
+    <string name="folder_structure">Author / Book Title / audio files</string>
+    <string name="choose_folder">Choose audiobook folder</string>
+    <string name="change_folder">Change folder</string>
+    <string name="folder_setup_hint">Choose or create Android/AudioBooks in the folder picker. If your phone restricts that location, choose another shared folder.</string>
+    <string name="folder_access_error">Folder access is unavailable. Select the folder again and allow access, or choose another writable shared folder.</string>
+    <string name="author_required">Author (required)</string>
+    <string name="title_required">Book title (required)</string>
+    <string name="required_download_metadata">Enter the author and book title, and choose a shared audiobook folder.</string>
+    <string name="save_resume">Save and resume</string>
+    <string name="cancel_edit">Cancel editing</string>
+    <string name="publication_stats">Saving to audiobook folder: %1$d%%</string>
+    <string name="download_publishing">Saving and verifying shared files</string>
+    <string name="download_publication_failed">Shared copy needs attention</string>
+    <string name="publication_retry_hint">Downloaded audio is retained. Check folder access and free space, then retry. The torrent will not download again.</string>
+    <string name="open_folder">Open folder</string>
+    <string name="external_player_hint">In Smart Audiobook Player, select this same audiobook folder as your library root. Completed books are organized by author, then book title.</string>
+    <string name="shared_files_retained">Completed shared files stay on your phone when you remove a download or uninstall this app.</string>
+    <string name="open_folder_hint">Select the audiobook folder in your file manager or audiobook player.</string>
 </resources>

@@ -24,6 +24,10 @@ data class DownloadEntity(
     val errorMessage: String? = null,
     val addedTimestamp: Long = System.currentTimeMillis(),
     val completedTimestamp: Long? = null,
+    val author: String? = null,
+    val destinationTreeUri: String? = null,
+    val publishedFolderUri: String? = null,
+    @androidx.room.ColumnInfo(defaultValue = "0") val publicationProgress: Float = 0f,
 ) {
     fun toDomain(): DownloadItem = DownloadItem(
         id = id,
@@ -43,5 +47,7 @@ data class DownloadEntity(
         errorMessage = errorMessage,
         addedTimestamp = addedTimestamp,
         completedTimestamp = completedTimestamp,
+        author = author, destinationTreeUri = destinationTreeUri,
+        publishedFolderUri = publishedFolderUri, publicationProgress = publicationProgress,
     )
 }

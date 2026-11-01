@@ -1,8 +1,6 @@
 package com.audiobookbay.app.di
 
-import com.audiobookbay.app.domain.repository.AudiobookPlayer
 import com.audiobookbay.app.domain.repository.TorrentDownloadManager
-import com.audiobookbay.app.player.AudiobookPlayerImpl
 import com.audiobookbay.app.torrent.TorrentDownloadManagerImpl
 import dagger.Binds
 import dagger.Module
@@ -20,9 +18,4 @@ abstract class EngineModule {
         impl: TorrentDownloadManagerImpl,
     ): TorrentDownloadManager
 
-    @Binds
-    @Singleton
-    abstract fun bindAudiobookPlayer(
-        impl: AudiobookPlayerImpl,
-    ): AudiobookPlayer
 }

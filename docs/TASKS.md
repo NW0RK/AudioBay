@@ -151,3 +151,30 @@ This checklist tracks preparation tasks completed by **Google Antigravity** and 
 - Removed obsolete broad storage permissions; torrent imports use the document picker
   and downloaded files use app-specific external storage. Imported torrents are capped
   at 10 MiB. Removing queue entries currently retains their content files.
+
+
+## Accepted product change — downloader-only (supersedes player/library phases)
+
+- [x] Remove native player, playback service/permission/dependencies, listening library navigation and bindings.
+- [x] Require editable author/title metadata before manual or catalog downloads.
+- [x] Provide shared-folder setup in Settings and Downloads; persist SAF read/write access.
+- [x] Default setup to Android/AudioBooks and explain explicitly chosen alternatives when restricted.
+- [x] Publish to Author/Book Title while preserving track names and disc folders.
+- [x] Sanitize unsafe names, preserve Unicode and keep existing books via numbered collisions.
+- [x] Add durable verified-copy checkpoints, publication progress, retry and completion states.
+- [x] Keep verified staging on failure; remove it only after successful publication.
+- [x] Preserve existing data through additive Room v3 migration and compatible saved request defaults.
+- [x] Verify folder layout, collisions, interrupted copying, revoked access, disk-full failures and restart/rename recovery with unit tests.
+- [x] Verify real SAF publication and byte equality for a lawful native torrent on the connected Android14 phone.
+- [x] Verify Room v2-to-v3 migration on device while retaining legacy tables and download rows.
+- [x] User explicitly selected folder/file verification without opening Smart Audiobook Player.
+- [x] Record final build/lint/unit/device results after the last low-storage recovery changes.
+
+Final result: APK and instrumentation APK assemble successfully; lint has no errors;
+48 unit tests and all 3 Android-device tests pass, including real Android/AudioBooks
+SAF publication, byte equality, migration and private staging cleanup. The installed
+app retains the configured folder grant. Test audio and test-author folders are removed.
+
+Playback, bookmarks, mini-player and listening progress tasks above are retired and
+must not be implemented. Existing shared audiobooks belong to the user and survive
+queue removal/app uninstall. Future work should stay focused on downloading.

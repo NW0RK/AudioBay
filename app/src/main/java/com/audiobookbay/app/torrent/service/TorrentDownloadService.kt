@@ -35,7 +35,7 @@ class TorrentDownloadService : Service() {
             // Allow the start command and its first database update to settle.
             delay(1500)
             manager.observeDownloads().collect { downloads ->
-                val active = downloads.filter { it.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING) }
+                val active = downloads.filter { it.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING, DownloadStatus.PUBLISHING) }
                 if (active.isEmpty()) {
                     stoppingBecauseIdle = true
                     stopSelfResult(lastStartId)
@@ -70,7 +70,9 @@ class TorrentDownloadService : Service() {
 
     private fun cleanupEngine(onlyIfIdle: Boolean = false) {
         CoroutineScope(SupervisorJob() + io).launch {
-            if (onlyIfIdle) manager.shutdownIfIdle() else manager.shutdown()
+            try { if (onlyIfIdle) manager.shutdownIfIdle() else manager.shutdown() }
+            catch (e: CancellationException) { throw e }
+            catch (e: Exception) { timber.log.Timber.e(e, "Torrent service cleanup failed") }
         }
     }
 

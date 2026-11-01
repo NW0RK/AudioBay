@@ -97,12 +97,6 @@ dependencies {
     // DataStore
     implementation(libs.datastore.preferences)
 
-    // Media3 / ExoPlayer
-    implementation(libs.media3.exoplayer)
-    implementation(libs.media3.session)
-    implementation(libs.media3.ui)
-    implementation(libs.media3.common)
-
     // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx)

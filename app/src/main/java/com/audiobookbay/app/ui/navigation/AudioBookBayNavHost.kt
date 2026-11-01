@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -27,8 +26,6 @@ import com.audiobookbay.app.ui.screens.categories.CategoriesScreen
 import com.audiobookbay.app.ui.screens.detail.AudiobookDetailScreen
 import com.audiobookbay.app.ui.screens.downloads.DownloadsScreen
 import com.audiobookbay.app.ui.screens.home.HomeScreen
-import com.audiobookbay.app.ui.screens.library.LibraryScreen
-import com.audiobookbay.app.ui.screens.nowplaying.NowPlayingScreen
 import com.audiobookbay.app.ui.screens.search.SearchScreen
 import com.audiobookbay.app.ui.screens.settings.SettingsScreen
 
@@ -41,8 +38,7 @@ private data class BottomNavItem(
 private val bottomNavItems = listOf(
     BottomNavItem("Home", Icons.Default.Home, NavRoute.Home),
     BottomNavItem("Search", Icons.Default.Search, NavRoute.Search),
-    BottomNavItem("Downloads", Icons.Default.Download, NavRoute.Downloads),
-    BottomNavItem("Library", Icons.Default.LibraryBooks, NavRoute.Library),
+    BottomNavItem("Downloads", Icons.Default.Download, NavRoute.Downloads()),
     BottomNavItem("Settings", Icons.Default.Settings, NavRoute.Settings),
 )
 
@@ -103,24 +99,11 @@ fun AudioBookBayNavHost() {
             composable<NavRoute.AudiobookDetail> {
                 AudiobookDetailScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToPlayer = { navController.navigate(NavRoute.NowPlaying) },
+                    onDownload = { id -> navController.navigate(NavRoute.Downloads(id)) },
                 )
             }
             composable<NavRoute.Downloads> {
                 DownloadsScreen()
-            }
-            composable<NavRoute.Library> {
-                LibraryScreen(
-                    onNavigateToDetail = { id ->
-                        navController.navigate(NavRoute.AudiobookDetail(id))
-                    },
-                    onNavigateToPlayer = { navController.navigate(NavRoute.NowPlaying) },
-                )
-            }
-            composable<NavRoute.NowPlaying> {
-                NowPlayingScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                )
             }
             composable<NavRoute.Settings> {
                 SettingsScreen()

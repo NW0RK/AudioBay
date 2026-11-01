@@ -1,5 +1,6 @@
 package com.audiobookbay.app.domain.repository
 
+import com.audiobookbay.app.domain.model.DownloadMetadata
 import com.audiobookbay.app.domain.model.DownloadItem
 import com.audiobookbay.app.domain.model.TorrentFile
 import com.audiobookbay.app.domain.model.TorrentInfo
@@ -27,13 +28,13 @@ interface TorrentDownloadManager {
      *
      * @param audiobookId Unique book ID to link with local library
      * @param magnetUri Full magnet URI (containing xt=urn:btih:... and optional trackers)
-     * @param destinationDir Local filesystem directory to write downloaded audio files
+     * @param metadata Required author, book title and shared folder grant
      * @param selectedFiles Optional subset of files to prioritize (others ignored)
      */
     suspend fun startDownload(
         audiobookId: String,
         magnetUri: String,
-        destinationDir: File,
+        metadata: DownloadMetadata,
         selectedFiles: List<Int>? = null,
     ): Result<DownloadItem>
 
@@ -43,13 +44,15 @@ interface TorrentDownloadManager {
     suspend fun startDownloadFromFile(
         audiobookId: String,
         torrentFile: File,
-        destinationDir: File,
+        metadata: DownloadMetadata,
         selectedFiles: List<Int>? = null,
     ): Result<DownloadItem>
 
     /**
      * Pauses an active torrent download.
      */
+    suspend fun updateMetadata(infoHash: String, metadata: DownloadMetadata): Result<Unit>
+
     suspend fun pauseDownload(infoHash: String): Result<Unit>
 
     /**

@@ -1,98 +1,95 @@
-# Codex continuation — AudioBookBay Android
+# AudioBookBay downloader handoff
 
-Updated 2026-11-01. Preserve the current project; do not restart scaffolding.
+Updated 2026-11-01. The user explicitly changed the product to a downloader only.
+Built-in playback, listening progress UI, library UI, sleep timers and mini-player
+are out of scope. Their service, navigation, bindings, contracts and Media3
+dependencies have been removed. Legacy Room tables/models remain for safe upgrades.
 
-## Current state
+## Current product
 
-The original Antigravity handoff overstated build readiness. This session fixed a
-missing Gradle wrapper JAR (official checksum verified), an invalid settings DSL
-block, missing launcher icons, an unqualified Hilt dispatcher, and two Media3
-unstable-API lint errors. No dependency versions were upgraded unnecessarily.
+Four tabs: Home, Search, Downloads, Settings. Discovery/search/details remain from
+commit a73670b. Details with an available magnet open a prefilled editable download
+form. Manual magnet and torrent imports require author, book title and shared folder.
+Missing metadata is requested rather than saved under an invented author name.
 
-Implemented and verified before torrent work:
-- Home discovery: real covers/cards, pull-to-refresh, pagination, loading/empty/error
-  states, deduplication, cancellation, and retry without discarding existing cards.
-- Search: 300 ms debounce, cancelled stale queries, ordered DataStore history capped
-  at 20, results grid and paging controls. The website sometimes ignores queries;
-  unrelated listings are rejected so LibriVox can supply real matches.
-- Details: type-safe route decoding, real covers, author/narrator/format/bitrate,
-  expandable synopsis, chapter metadata, and raw available torrent information.
-- LibriVox: documented coverart/id parameters, namespaced IDs, variable url_other
-  JSON shape, transport-error fallback, source-consistent paging. Ascending API
-  ordering avoids the unfinished recordings seen with newest IDs.
-- Room v2 catalog_cache keeps remote snapshots separate from owned library records.
-  Explicit migration 1 to 2 replaces destructive migration. Offline paging uses
-  cached pages consistently. Full details survive database reopening offline.
-- Parser: verified /abss/<slug>/ detail URL, inline metadata boundaries, relative
-  links and plain category text; challenge pages cannot become fake details.
+Default destination: internal storage Android/AudioBooks. First use requires the
+system ACTION_OPEN_DOCUMENT_TREE picker. On the connected Samsung Android14 phone,
+Android itself cannot be granted, but its AudioBooks subfolder CAN be created and
+granted. That exact folder was created through the picker and its persistent grant
+saved in DataStore. Settings and Downloads share the same folder preference.
+If a phone denies a location, the user must explicitly choose another writable tree.
+Do not replace SAF with guessed filesystem paths or request all-files access.
 
-The native-engine milestone is implemented in TorrentDownloadManagerImpl. It uses the
-actual libtorrent4j 2.1.0-39 API, atomic request/resume files, Room download records,
-selected audio priorities, scoped storage checks, polling, native alerts, pause,
-resume, and restart restoration. TorrentFilesTest covers selection/path safety.
-TorrentTransferTest generates its own lawful WAV/torrent and uses two local native
-sessions on the phone to exercise metadata, transfer, pause, restart and byte checks.
-The local native transfer test now passes, including partial pause, manager/session
-recreation, saved native resume data, completion and byte-for-byte checks. It does not
-kill the Android process or test public DHT/tracker connectivity. Upload-mode gating
-fixed a real metadata/zero-priority peer disconnect uncovered by this test.
-TorrentDownloadService observes progress, stops when idle, handles onTimeout, and
-checks idle cleanup under the manager lock to avoid pausing a newly queued transfer.
-DownloadsViewModel and DownloadsScreen now support manual magnets, SAF torrent
-imports (10 MiB limit), real progress/speed/peers/status, pause/resume/remove, notification
-permission and errors. Removal retains content files. Wi-Fi-only is still unimplemented.
-The final full build/test/lint/device run is recorded in .tools/final-checks.log.
+Completed layout: <selected root>/<Author>/<Book Title>/<original tracks/discs>.
+A redundant torrent wrapper directory is stripped; disc folders and track names are
+preserved. Unicode names are retained, unsafe characters sanitized, and folder
+components capped at 180 UTF-8 bytes. Existing books are not overwritten: collisions
+use Book Title (2), (3), etc. Author folders are reused.
 
-## Environment and commands
+## Pipeline and persistence
 
-No Java/Android SDK was installed initially. Local tools are ignored under .tools.
-PowerShell, from repository root:
+libtorrent still writes to owned app-specific staging (Download/torrents/<hash>).
+After selected pieces verify, SavedTorrent persists the verified file manifest,
+pauses/removes the native handle, and starts shared publication independently of
+native session lifetime. Room v3 adds author, tree URI, published folder URI and
+publication progress. Migration 2 to 3 preserves every legacy table and download;
+1 to 2 to 3 upgrades are registered. Old request JSON fields have compatible defaults.
+Legacy downloads request missing metadata before resuming/publication.
+
+BookPublisher uses an opaque document backend, a durable private journal and a
+hidden per-download pending directory under the author. Copies are SHA-256 verified
+through the destination provider and checkpointed per file; retries reuse verified
+copies. The completed book folder appears after successful directory rename. A marker
+permits recovery if a process stops between rename and final journal commit.
+Destination/metadata changes on failed publication restart copying from retained
+staging without fetching torrent data again. Old inaccessible pending folders are
+left intact rather than risking deletion in a previously selected location.
+
+COMPLETED is set only after verified shared publication. Only then is owned staging
+removed. Publication errors retain source audio and show a retry/edit action. Runtime
+state overlays also preserve visible errors if low storage prevents a journal/Room
+write. Shutdown cancels copying and records a recoverable publication failure. The
+foreground dataSync service includes publication in its active work and keeps API35
+onTimeout cleanup. Published files are never removed by queue removal.
+
+## Verification
+
+- 48 JVM unit tests, APK/test APK assembly and lint passed after publication work.
+- Three Android device tests passed against the REAL configured Android/AudioBooks
+  SAF tree: catalog persistence, Room v2-to-v3 migration, and generated lawful torrent
+  transfer with partial pause, native session recreation, shared byte equality and
+  staging cleanup. The publication test removes only its own test book and empty
+  test-author folder afterward.
+- The user chose folder/file verification only. Smart Audiobook Player is not installed
+  in the phone's main profile; do not claim its UI was tested.
+- Final verification passed after low-storage runtime recovery changes: assembly,
+  lint and 48 unit tests; all three device tests passed again on the real configured
+  SAF folder. Evidence: .tools/downloader-final-checks.log, .tools/metadata-tests.log,
+  .tools/shared-folder-device-final.log. The final debug APK is installed on the phone.
+
+## Build and device commands
 
 ```powershell
 $env:JAVA_HOME = (Get-ChildItem .tools/jdk -Directory | Select-Object -First 1).FullName
 $env:GRADLE_USER_HOME = "$PWD/.tools/gradle-cache"
 $env:ANDROID_HOME = "$PWD/.tools/android-sdk"
-.\gradlew.bat assembleDebug testDebugUnitTest lintDebug
-.\gradlew.bat connectedDebugAndroidTest
-.\.tools/android-sdk/platform-tools/adb.exe devices
+.\gradlew.bat assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug
+.\.tools/android-sdk/platform-tools/adb.exe install -r app/build/outputs/apk/debug/app-debug.apk
+.\.tools/android-sdk/platform-tools/adb.exe install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+.\.tools/android-sdk/platform-tools/adb.exe shell am instrument -w -r -e useConfiguredFolder true com.audiobookbay.app.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-Network-enabled execution is needed for uncached dependencies. local.properties
-points at .tools/android-sdk. The user authorized USB debugging and installation on
-the connected Samsung SM-A525F, Android 14. Wake the phone before manual UI checks;
-it sleeps quickly. Do not change the user's global network settings for offline tests.
+Run instrumentation directly after installation to retain the user's app data and
+SAF grant. Gradle connectedDebugAndroidTest previously removed the target app during
+cleanup. Without useConfiguredFolder, native tests use an isolated file document
+backend; do not confuse that with real SAF verification. All build tools/logs live
+under ignored .tools. The user authorized this connected phone for installation and
+testing. Wake it before UI work; it sleeps quickly. Its main Android user is 0.
 
-Logs: .tools/verify.log (discovery checks), .tools/device-tests.log (Room device test),
-.tools/engine-tests.log (native transfer checks), .tools/engine-build.log,
-.tools/final-checks.log (successful full verification).
-All are ignored. Test reports are under app/build/reports and app/build/outputs.
+## Remaining work beyond this request
 
-## Next work
-
-1. Continue with lawful source-to-library integration and playback. The final full
-   check passed: assembleDebug, 34 unit tests, lintDebug, and 2 Android-device tests
-   (including partial pause/resume across native-session recreation). Evidence is
-   in .tools/final-checks.log. The final APK was reinstalled after test cleanup.
-2. Add ETA and file-selection controls, Wi-Fi-only constraints, and deletion choices.
-3. Connect lawful source downloads now that a local native transfer is verified.
-   LibriVox detail sections already contain audio URLs; Internet Archive metadata
-   must be inspected for actual torrent files rather than inventing URLs.
-4. Transfer completed audio into the library, implement robust Media3 playback,
-   progress persistence, bookmarks/sleep timer and mini-player.
-5. Categories/settings remain placeholders. Wi-Fi-only constraints are not implemented;
-   the engine currently rejects that option explicitly rather than pretending it works.
-6. Add migration/device/lifecycle/release checks; production readiness is still pending.
-
-## Known limits
-
-- Native ABIs currently include arm64 only. Downloads require API 28; the app still
-  has minSdk 26 with an explicit engine guard. Resolve supported-device policy before release.
-- Restored interrupted downloads require user resume to respect foreground-service
-  launch limits; they do not silently restart in the background.
-- Real public DHT/tracker transfers, Android 15 timeout behavior and process-kill
-  recovery still need independent verification beyond the local synthetic test.
-- Details explicitly state downloads/playback are under development; there is no
-  misleading working-looking download button yet.
-- No release signing or distribution has been performed.
-
-The later live search fix uses documented LibriVox caret-prefix title queries and treats 404/no-match responses as empty results. Assembly, 34 unit tests and lint passed in .tools/search-checks.log; the corrected APK has now been installed successfully.
+Public DHT/tracker reliability, Android15 timeout on an API35 phone, Wi-Fi-only
+constraints, richer selective-file UI, and release signing/minification checks remain.
+Native ABIs currently include arm64 and downloads require API28; browsing minSdk is26.
+No playback work should be reintroduced. The Android folder grant is mandatory and
+cannot be silently manufactured. Files in shared storage remain after app uninstall.
