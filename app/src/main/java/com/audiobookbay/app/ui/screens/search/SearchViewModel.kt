@@ -26,6 +26,7 @@ class SearchViewModel @Inject constructor(private val repository: AudiobookSearc
     val pageError = _pageError.asStateFlow()
 
     fun setQuery(value: String) {
+        if (_query.value == value) return
         _query.value = value
         request?.cancel()
         page = 0
@@ -35,6 +36,18 @@ class SearchViewModel @Inject constructor(private val repository: AudiobookSearc
         _uiState.value = if (value.isBlank()) UiState.Idle else UiState.Loading
         if (value.isBlank()) return
         request = viewModelScope.launch { delay(300); fetch(value.trim(), 1) }
+    }
+
+    fun submit() {
+        val term = query.value.trim().replace(Regex("\\s+"), " ")
+        if (term.isBlank()) return
+        request?.cancel()
+        page = 0
+        _endReached.value = false
+        _pageError.value = false
+        _isLoadingMore.value = false
+        _uiState.value = UiState.Loading
+        request = viewModelScope.launch { fetch(term, 1) }
     }
 
     fun retry() {

@@ -203,3 +203,78 @@ queue removal/app uninstall. Future work should stay focused on downloading.
 - [x] Keep verified empty catalog results on the original source.
 - [x] Add four regressions; APK assembly, 52 unit tests and lint pass.
 - [x] Complete phone verification of both Witcher and The Last Wish after installation; Sapkowski listings are visible.
+
+## Modern Android UI refresh
+- [x] Refresh theme, adaptive grids, localized navigation, search controls, detail action, queue menus, and settings headings.
+- [ ] Complete presentation-state extraction and focused UI tests.
+- [x] Verify debug build, existing unit tests, and Android lint using the bundled Java 17 JDK.
+- [ ] Verify device layouts and visual states.
+
+- [x] Expand visual refresh with discovery hero, taller cover cards, grouped Settings cards, detail cover panel, collapsible download setup, and removal of source badges from book cards; build, existing unit tests, and lint pass.
+
+- [x] Apply reference-inspired coral/navy styling, rounded navigation, featured cover shelf, catalog rows, and large cover detail layout; preserve downloader-only behavior. Debug build, existing unit tests, and lint pass.
+
+- [x] Raise icon-only navigation pill above system insets; improve Search layout, explicit keyboard submission, whitespace normalization, automatic pagination, and result count. Add search submission/repeated-query tests; debug build, unit tests and lint pass.
+
+- [x] Add read-only detail comments with author/date, selectable text, refresh, default-compatible cached model, and parser tests for nested replies/empty pages; build, unit tests, and lint pass.
+- [ ] Verify comments against a live populated page (sample URLs returned HTTP 404).
+
+- [x] Let screen content scroll behind floating navigation, add trailing scroll space for final items, and move detail download action into scroll content. Debug build and lint pass.
+
+- [x] Add adaptive audiobook download launcher icon with navy, cream and coral artwork and Android themed icon support.
+
+## Frosted glass reference design — 2026-11-01
+
+- [x] Add a cover-led book detail layout with a circular frosted download action overlapping the artwork, centered title/author, and natural cover proportions.
+- [x] Share translucent gradient panels, fine glass rims, plum surfaces, coral accents and rounded shapes across discovery, search cards, Downloads, Settings and navigation.
+- [x] Add the glass action to download setup and automatically expand a book's prepared form; preserve metadata/folder validation and downloader-only behavior.
+- [x] Hide floating navigation on book details; improve navigation contrast over scrolling content.
+- [x] Verify debug APK assembly, all 68 existing unit tests and Android lint (`.tools/glass-design-checks.log`); install on the connected phone and inspect discovery, detail, and the prepared download form.
+
+
+## Richer book information and Saved � 2026-11-01
+
+- [x] Parse optional language, posting date, uploader, format, bitrate and size within catalog posts; exclude comment metadata and preserve unknown/variable bitrate values.
+- [x] Show compact language/format/size summaries and labeled detail metadata without inventing missing language or format.
+- [x] Add a dedicated Saved tab, accessible save/remove controls, offline snapshots, newest-first ordering, and recoverable read/write failures.
+- [x] Persist Saved separately through Room, repository contracts and Hilt; identify books by source plus ID and preserve existing tables through additive v3-to-v4 migration.
+- [x] Add parser/cache compatibility and repository/ViewModel regressions for duplicate prevention, source identity, failure/retry, and synchronized state.
+- [x] Final build, lint and device verification, including migration/reopen persistence and accessible save/remove controls.
+- [x] Verify five-tab layout and Saved empty state visually on Samsung SM-A525F; device UI tests cover all five tabs, Saved navigation, metadata summary, accessible save/remove and failed-write retry.
+- [ ] Manually exercise an uncached saved detail while offline; existing detail error/retry flow is retained.
+
+Verification: assembleDebug, testDebugUnitTest (73 tests), lintDebug and four persistence/download device tests passed (`.tools/saved-complete.log`). Two additional Saved UI tests passed (`.tools/saved-ui-passed.log`). Verified debug APK installed on the Android 14 phone. Temporary UI-test interruptions were caused by the phone sleeping and a competing instrumentation run; final isolated UI run passed.
+
+## Reliable Home and compact download setup - 2026-11-01
+
+- [x] Handle Home without restoring saved nested pages; reset discovery to the top on every tap while retaining loaded catalog data and avoiding duplicate Home entries.
+- [x] Consume scroll resets once so normal Back navigation can retain browsing position.
+- [x] Extract stateless download setup with catalog book/author summary, expandable metadata and link editing, compact destination row and optional full path; retain the glass download action.
+- [x] Automatically show missing required metadata; preserve manual magnet/torrent imports, queue edit/resume, SAF selection, busy states, disabled actions and inline errors.
+- [x] Add six form UI tests covering edits, missing metadata/folder, busy state, imports, resume/error, and narrow-screen large text; add two saved-stack/Home regression tests.
+- [x] Verify debug/test APK builds, 73 JVM tests, lint and all eight new device UI tests (`.tools/home-compact-checks.log`, `.tools/home-compact-device-tests.log`).
+- [x] Inspect the compact form on the connected phone and verify Home after scrolling and after discovery/book/download navigation (`.tools/compact-form.png`, `.tools/compact-home-reset.xml`, `.tools/compact-home-flow.xml`).
+
+
+## Compact audiobook details - 2026-11-01
+
+- [x] Remove title bar; overlay accessible contrasting Back button, retaining navigation during loading/errors and existing status-bar inset.
+- [x] Show narrators on separate lines; handle separators, blank values, ambiguous names and Unicode.
+- [x] assembleDebug, testDebugUnitTest (three new formatting tests), lintDebug passed (.tools/compact-details-checks.log).
+- [ ] Device visual checks for cover position, Back, narrow screens and large text; device connection unavailable during this run.
+
+## Floating navigation pill refinement — 2026-11-01
+
+- [x] Extract stateless glass navigation with five equally spaced outlined icons, 44 dp circular selection, 24 dp icons, 180 ms tint/opacity transitions, 64 dp height, 8 dp inner padding and a centered 400 dp maximum width; preserve existing routes, Home reset, detail hiding and system insets.
+- [x] Verify debug assembly, existing unit tests and lint; five focused device tests pass for accessible tabs, selection/callbacks, minimum touch sizes, equal spacing in dark/light layouts and Home navigation (`.tools/navigation-pill-checks.log`, `.tools/navigation-pill-lint.log`, `.tools/navigation-pill-device.log`). Visually inspect the installed app on Samsung SM-A525F with button navigation (`.tools/navigation-pill.png`).
+- [ ] Visually verify on a physical tablet and a device using gesture navigation; light theme and width variants currently have automated layout coverage only.
+
+- [x] Improve detail readability with spaced information and description panels, one subtly blurred download button below the cover, and separated torrent/comments sections. Build/lint verification blocked locally by missing Java.
+
+## AI book and author name correction — 2026-11-01
+
+- [x] Add a Hilt-injected Gemini corrector with structured nullable title/author output, validation, a 15-second timeout, cancellation and serialized requests; no request logging, redirects or automatic retries.
+- [x] Correct fresh catalog download forms automatically; provide Fix names and Undo for manual and queued-download metadata; preserve manual edits and restored state, discard stale responses, and keep manual downloads available on failure.
+- [x] Load the private key from ignored local.properties with an environment override; verify it is absent from tracked files and document private-build limitations in BOOK_NAME_CORRECTION.md.
+- [x] Use gemini-3.5-flash-lite after live API verification showed that Google rejects 2.5 Flash-Lite for new users; verify the replacement's documented free tier and live correction of The Hobbit / J. R. R. Tolkien (.tools/book-names-smoke.log).
+- [x] Verify debug assembly, 89 passing JVM tests, lint and eight passing download-form UI tests on Samsung SM-A525F; compile the UI test APK (.tools/book-names-checks.log, .tools/book-names-device.log).

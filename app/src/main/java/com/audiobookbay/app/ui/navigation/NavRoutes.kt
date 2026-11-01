@@ -24,4 +24,7 @@ sealed interface NavRoute {
 
     @Serializable
     data object Settings : NavRoute
+
+    @Serializable
+    data object Saved : NavRoute
 }

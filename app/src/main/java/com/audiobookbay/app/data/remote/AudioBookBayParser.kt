@@ -1,5 +1,6 @@
 package com.audiobookbay.app.data.remote
 
+import com.audiobookbay.app.domain.model.AudiobookComment
 import com.audiobookbay.app.domain.model.Audiobook
 import com.audiobookbay.app.domain.model.AudiobookDetail
 import com.audiobookbay.app.domain.model.AudiobookSource
@@ -44,6 +45,7 @@ class AudioBookBayParser {
                     ?: Regex("Category:\\s*(.*?)(?:Language:|$)", RegexOption.IGNORE_CASE)
                         .find(post.select(".postInfo").text())?.groupValues?.get(1)?.trim()
 
+                val metadata = parseMetadata(post)
                 audiobooks.add(
                     Audiobook(
                         id = id,
@@ -52,6 +54,9 @@ class AudioBookBayParser {
                         narrator = extractNarrator(contentText),
                         coverImageUrl = coverImg,
                         category = category,
+                        language = metadata["Language"], datePosted = metadata["Posted"],
+                        uploader = metadata["Shared by"], audioFormat = metadata["Format"],
+                        bitrate = metadata["Bitrate"], formattedSize = metadata["File Size"],
                         detailUrl = detailUrl,
                         source = AudiobookSource.AUDIOBOOKBAY,
                     ),
@@ -100,21 +105,49 @@ class AudioBookBayParser {
             null
         }
 
+        val metadata = parseMetadata(document.selectFirst("div.post, article.post") ?: document.body())
         return AudiobookDetail(
             id = idOrSlug,
             title = title,
             author = extractAuthor(metadataText, title),
             narrator = extractNarrator(metadataText),
             description = description,
+            comments = parseComments(document),
             coverImageUrl = coverUrl,
             torrentInfo = torrentInfo,
-            audioFormat = Regex("(?i)Format:\\s*([A-Za-z0-9/ ]+?)(?=Bitrate:|$)")
-                .find(metadataText)?.groupValues?.get(1)?.trim() ?: "",
-            bitrate = Regex("(?i)Bitrate:\\s*([0-9]+\\s*[Kk]bps|\\?)")
-                .find(metadataText)?.groupValues?.get(1),
+            language = metadata["Language"].orEmpty(), datePosted = metadata["Posted"],
+            uploader = metadata["Shared by"], formattedSize = metadata["File Size"].orEmpty(),
+            audioFormat = metadata["Format"].orEmpty(), bitrate = metadata["Bitrate"],
             source = AudiobookSource.AUDIOBOOKBAY,
         )
     }
+
+    private fun parseMetadata(post: org.jsoup.nodes.Element): Map<String, String> {
+        val copy = post.clone()
+        copy.select(".commentlist, .comment-list, .commentZone, #comments, script, style").remove()
+        val text = copy.select(".postInfo, .postContent").joinToString("\n") { it.wholeText() }
+        val labels = "Language|Keywords|Posted|Format|Bitrate|File Size|Shared by|Written by|Read by|Category"
+        return Regex("(?i)($labels):\\s*(.*?)(?=(?:$labels):|\\b(?:Unabridged|Abridged)\\b|[\\r\\n]|$)")
+            .findAll(text).mapNotNull { match ->
+                val key = labels.split("|").first { it.equals(match.groupValues[1], true) }
+                val value = match.groupValues[2].trim().trimEnd('/').trim()
+                value.takeIf { it.isNotBlank() }?.let { key to it }
+            }.toMap()
+    }
+
+    private fun parseComments(document: Document): List<AudiobookComment> =
+        document.select(".commentlist li[id^=comment-], .comment-list li[id^=comment-], .commentZone [id^=comment-]")
+            .distinctBy { it.id() }
+            .mapNotNull { element ->
+                // Remove nested replies before reading this comment's content.
+                val own = element.clone().apply { select(".children, ul, ol, script, style, .reply, form").remove() }
+                val author = own.selectFirst(".comment-author cite, .comment-author .fn, cite, .commentAuthor")?.text().orEmpty()
+                val date = own.selectFirst(".comment-meta, .commentmetadata, .commentDate, time, small")?.text().orEmpty()
+                val body = own.selectFirst(".comment-content, .comment-body .comment-text, .commentText")
+                val text = if (body != null) body.select("p").takeIf { it.isNotEmpty() }?.joinToString("\n\n") { it.text() } ?: body.text()
+                    else own.select("p").joinToString("\n\n") { it.text() }
+                if (text.isBlank()) null else AudiobookComment(element.id(), author, date, text)
+            }
 
     private fun extractInfoHash(document: Document): String? {
         val rows = document.select("table tr")

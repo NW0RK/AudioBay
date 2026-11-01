@@ -54,4 +54,25 @@ class SearchViewModelTest {
         assertEquals(UiState.Idle, vm.uiState.value)
         coVerify(exactly = 0) { repository.searchAudiobooks(any(), any()) }
     }
+    @Test fun `submit normalizes whitespace and skips debounce`() = runTest(dispatcher) {
+        coEvery { repository.searchAudiobooks("Alice Wonderland", 1) } returns Resource.Success(emptyList())
+        val vm = SearchViewModel(repository)
+        vm.setQuery("  Alice   Wonderland  ")
+        vm.submit()
+        runCurrent()
+        coVerify(exactly = 1) { repository.searchAudiobooks("Alice Wonderland", 1) }
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repository.searchAudiobooks(any(), any()) }
+    }
+
+    @Test fun `same query does not restart pending search`() = runTest(dispatcher) {
+        coEvery { repository.searchAudiobooks("Alice", 1) } returns Resource.Success(emptyList())
+        val vm = SearchViewModel(repository)
+        vm.setQuery("Alice")
+        advanceTimeBy(200)
+        vm.setQuery("Alice")
+        advanceTimeBy(100)
+        runCurrent()
+        coVerify(exactly = 1) { repository.searchAudiobooks("Alice", 1) }
+    }
 }

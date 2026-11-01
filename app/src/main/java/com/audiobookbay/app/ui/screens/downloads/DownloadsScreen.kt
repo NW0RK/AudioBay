@@ -6,11 +6,16 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.audiobookbay.app.data.storage.DownloadFolderSettings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import com.audiobookbay.app.ui.components.GlassPanel
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,7 +26,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.audiobookbay.app.R
 import com.audiobookbay.app.domain.model.*
-import com.audiobookbay.app.ui.components.DownloadFolderPicker
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,6 +35,9 @@ fun DownloadsScreen() {
     val state by vm.uiState.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
+    val correcting by vm.correcting.collectAsStateWithLifecycle()
+    val correctionFailed by vm.correctionFailed.collectAsStateWithLifecycle()
+    val canUndoNames by vm.canUndoNames.collectAsStateWithLifecycle()
     val author by vm.author.collectAsStateWithLifecycle()
     val title by vm.title.collectAsStateWithLifecycle()
     val magnet by vm.magnet.collectAsStateWithLifecycle()
@@ -46,49 +53,55 @@ fun DownloadsScreen() {
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { vm.importTorrent(it.toString()) } }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     fun requestNotifications() { if (Build.VERSION.SDK_INT >= 33) permission.launch(Manifest.permission.POST_NOTIFICATIONS) }
+    var setupExpanded by rememberSaveable { mutableStateOf(vm.isCatalogDownload) }
+    var editingMetadata by rememberSaveable { mutableStateOf(false) }
+    var editingLink by rememberSaveable { mutableStateOf(false) }
+    var showingFolder by rememberSaveable { mutableStateOf(false) }
+    val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let { vm.selectFolder(it.toString()) }
+    }
+    LaunchedEffect(error) { if (error != null) setupExpanded = true }
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(R.string.nav_downloads)) })
-        LazyColumn(state = grid, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        LazyColumn(state = grid, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 128.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
-                DownloadFolderPicker(vm.folderLabel(effectiveFolder), effectiveFolder != null, !busy, vm::selectFolder)
-                if (wifiOnly) Text(stringResource(R.string.wifi_only_enabled_hint), style = MaterialTheme.typography.bodySmall)
-                Text(stringResource(R.string.import_download_hint), style = MaterialTheme.typography.bodyMedium)
-                OutlinedTextField(author, vm::setAuthor, label = { Text(stringResource(R.string.author_required)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(title, vm::setTitle, label = { Text(stringResource(R.string.title_required)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                if (editing == null) OutlinedTextField(magnet, vm::setMagnet, label = { Text(stringResource(R.string.magnet_link)) }, modifier = Modifier.fillMaxWidth(), maxLines = 3)
-                val ready = !busy && author.isNotBlank() && title.isNotBlank() && effectiveFolder != null
-                if (editing != null) {
-                    Button(onClick = { requestNotifications(); vm.saveAndResume() }, enabled = ready) { Text(stringResource(R.string.save_resume)) }
-                    TextButton(onClick = vm::cancelEdit) { Text(stringResource(R.string.cancel_edit)) }
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { requestNotifications(); vm.startMagnet() }, enabled = ready && magnet.isNotBlank()) { Text(stringResource(R.string.start_download)) }
-                        OutlinedButton(onClick = { requestNotifications(); picker.launch(arrayOf("application/x-bittorrent", "application/octet-stream")) }, enabled = ready) { Text(stringResource(R.string.open_torrent)) }
-                    }
-                }
+                DownloadSetupForm(
+                    state = DownloadSetupState(
+                        title = title, author = author, magnet = magnet,
+                        folderLabel = vm.folderLabel(effectiveFolder), folderSelected = effectiveFolder != null,
+                        catalogBook = vm.isCatalogDownload, editingDownload = editing != null,
+                        expanded = setupExpanded, editingMetadata = editingMetadata, editingLink = editingLink,
+                        showingFolder = showingFolder, busy = busy, wifiOnly = wifiOnly, error = error,
+                        correctionAvailable = vm.correctionAvailable, correcting = correcting,
+                        correctionFailed = correctionFailed, canUndoNames = canUndoNames,
+                    ),
+                    onToggleExpanded = { setupExpanded = !setupExpanded },
+                    onToggleMetadata = { editingMetadata = !editingMetadata },
+                    onToggleLink = { editingLink = !editingLink },
+                    onToggleFolder = { showingFolder = !showingFolder },
+                    onAuthorChange = vm::setAuthor, onTitleChange = vm::setTitle, onMagnetChange = vm::setMagnet,
+                    onChooseFolder = { folderPicker.launch(DownloadFolderSettings.initialUri) },
+                    onStart = { requestNotifications(); vm.startMagnet() },
+                    onOpenTorrent = { requestNotifications(); picker.launch(arrayOf("application/x-bittorrent", "application/octet-stream")) },
+                    onSaveResume = { requestNotifications(); vm.saveAndResume() },
+                    onCancelEdit = vm::cancelEdit, onDismissError = vm::dismissError,
+                    onFixNames = vm::fixNames, onUndoNames = vm::undoNames,
+                )
             }
-            if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-            error?.let { reason -> item {
-                Text(stringResource(when (reason) {
-                    DownloadFormError.REQUIRED -> R.string.required_download_metadata
-                    DownloadFormError.FOLDER -> R.string.folder_access_error
-                    DownloadFormError.ACTION -> R.string.download_action_error
-                }), color = MaterialTheme.colorScheme.error)
-                TextButton(onClick = vm::dismissError) { Text(stringResource(R.string.dismiss)) }
-            } }
+            item { com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.download_queue)) }
             when (val result = state) {
                 UiState.Idle, UiState.Loading -> item { CircularProgressIndicator() }
                 is UiState.Error -> item { Text(stringResource(R.string.download_queue_error)) }
                 is UiState.Success -> {
                     if (result.data.isEmpty()) item { Text(stringResource(R.string.no_downloads)) }
                     items(result.data, key = { it.id }) { download ->
-                        Card(Modifier.fillMaxWidth()) {
+                        GlassPanel(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(download.title, style = MaterialTheme.typography.titleMedium)
-                                download.author?.let { Text(it) }
-                                Text(stringResource(statusLabel(download.status)))
+                                Text(download.title, style = MaterialTheme.typography.titleLarge)
+                                download.author?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                com.audiobookbay.app.ui.components.StatusBadge(stringResource(statusLabel(download.status)), download.status in setOf(DownloadStatus.ERROR, DownloadStatus.PUBLICATION_FAILED))
                                 val publishing = download.status in setOf(DownloadStatus.PUBLISHING, DownloadStatus.PUBLICATION_FAILED)
-                                LinearProgressIndicator(progress = { (if (publishing) download.publicationProgress else download.progress).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+                                LinearProgressIndicator(progress = { (if (publishing) download.publicationProgress else download.progress).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(MaterialTheme.shapes.small))
                                 if (publishing) Text(stringResource(R.string.publication_stats, (download.publicationProgress * 100).toInt()))
                                 else Text(stringResource(R.string.download_stats, (download.progress * 100).toInt(), String.format(Locale.getDefault(), "%.1f", download.downloadSpeedBytesPerSec / 1024.0), download.peers))
                                 if (download.status == DownloadStatus.DOWNLOADING) {
@@ -110,10 +123,16 @@ fun DownloadsScreen() {
                                                 .onFailure { android.widget.Toast.makeText(context, R.string.open_folder_hint, android.widget.Toast.LENGTH_LONG).show() }
                                         }) { Text(stringResource(R.string.open_folder)) }
                                     }
-                                    if (download.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.WAITING_FOR_WIFI, DownloadStatus.ERROR)) {
-                                        TextButton(onClick = { vm.showFiles(download) }, enabled = !busy) { Text(stringResource(R.string.select_files)) }
+                                    Box {
+                                        var menu by remember { mutableStateOf(false) }
+                                        IconButton(onClick = { menu = true }) { Icon(androidx.compose.material.icons.Icons.Default.MoreVert, stringResource(R.string.more_actions)) }
+                                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                            if (download.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.WAITING_FOR_WIFI, DownloadStatus.ERROR)) {
+                                                DropdownMenuItem(text = { Text(stringResource(R.string.select_files)) }, enabled = !busy, onClick = { menu = false; vm.showFiles(download) })
+                                            }
+                                            DropdownMenuItem(text = { Text(stringResource(R.string.remove_queue_only)) }, enabled = !busy, onClick = { menu = false; vm.cancel(download.infoHash) })
+                                        }
                                     }
-                                    TextButton(onClick = { vm.cancel(download.infoHash) }, enabled = !busy) { Text(stringResource(R.string.remove_download)) }
                                 }
                             }
                         }

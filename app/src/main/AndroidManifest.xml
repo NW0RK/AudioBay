@@ -20,9 +20,9 @@
     <application
         android:name=".AudioBookBayApp"
         android:allowBackup="true"
-        android:icon="@drawable/cover_placeholder"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/cover_placeholder"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.AudioBookBay"
         android:enableOnBackInvokedCallback="true">
@@ -53,3 +53,4 @@
     </application>
 
 </manifest>
+

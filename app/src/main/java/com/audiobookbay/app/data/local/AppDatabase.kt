@@ -18,6 +18,7 @@ import com.audiobookbay.app.data.local.entity.PlaybackProgressEntity
 
 @Database(
     entities = [
+        com.audiobookbay.app.data.local.entity.SavedBookEntity::class,
         AudiobookEntity::class,
         CatalogCacheEntity::class,
         ChapterEntity::class,
@@ -25,10 +26,11 @@ import com.audiobookbay.app.data.local.entity.PlaybackProgressEntity
         DownloadEntity::class,
         BookmarkEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
+    abstract fun savedBookDao(): com.audiobookbay.app.data.local.dao.SavedBookDao
     abstract fun catalogCacheDao(): CatalogCacheDao
     abstract fun audiobookDao(): AudiobookDao
     abstract fun playbackProgressDao(): PlaybackProgressDao
@@ -36,6 +38,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun bookmarkDao(): BookmarkDao
 
     companion object {
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `saved_books` (`source` TEXT NOT NULL, `bookId` TEXT NOT NULL, `payload` TEXT NOT NULL, `savedAt` INTEGER NOT NULL, PRIMARY KEY(`source`, `bookId`))")
+            }
+        }
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `catalog_cache` (`cacheKey` TEXT NOT NULL, `payload` TEXT NOT NULL, PRIMARY KEY(`cacheKey`))")

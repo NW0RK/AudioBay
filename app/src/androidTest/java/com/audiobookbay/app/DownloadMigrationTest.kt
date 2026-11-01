@@ -27,7 +27,7 @@ class DownloadMigrationTest {
                 old.execSQL("INSERT INTO downloads VALUES ('legacy', 'book', 'Legacy Book', 'legacy', '/retained/staging', 'PAUSED', 0.5, 100, 200, 0, 0, 0, 0, -1, NULL, 1, NULL)")
                 old.version = 2
             }
-            database = Room.databaseBuilder(context, AppDatabase::class.java, name).addMigrations(AppDatabase.MIGRATION_2_3).build()
+            database = Room.databaseBuilder(context, AppDatabase::class.java, name).addMigrations(AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4).build()
             val item = checkNotNull(database.downloadDao().getDownloadById("legacy"))
             assertEquals("Legacy Book", item.title)
             assertEquals("/retained/staging", item.destinationPath)

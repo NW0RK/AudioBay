@@ -15,6 +15,14 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
+    @Binds
+    @Singleton
+    abstract fun bindBookNameCorrector(impl: com.audiobookbay.app.data.remote.GeminiBookNameCorrector): com.audiobookbay.app.domain.repository.BookNameCorrector
+
+    @Binds
+    @Singleton
+    abstract fun bindSavedBooksRepository(impl: com.audiobookbay.app.data.repository.SavedBooksRepositoryImpl): com.audiobookbay.app.domain.repository.SavedBooksRepository
+
 
     @Binds
     @Singleton

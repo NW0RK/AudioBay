@@ -8,6 +8,7 @@ import com.audiobookbay.app.data.storage.DownloadNetworkSettings
 import com.audiobookbay.app.domain.model.*
 import com.audiobookbay.app.domain.repository.AudiobookRepository
 import com.audiobookbay.app.domain.repository.TorrentDownloadManager
+import com.audiobookbay.app.domain.repository.BookNameCorrector
 import com.audiobookbay.app.torrent.DownloadStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
@@ -28,7 +29,65 @@ class DownloadsViewModel @Inject constructor(
     private val network: DownloadNetworkSettings,
     private val repository: AudiobookRepository,
     private val saved: SavedStateHandle,
+    private val corrector: BookNameCorrector,
 ) : ViewModel() {
+    private val _correcting = MutableStateFlow(false)
+    val correcting = _correcting.asStateFlow()
+    val correctionAvailable get() = corrector.available
+    val correctionFailed = saved.getStateFlow("correctionFailed", false)
+    val canUndoNames = saved.getStateFlow("canUndoNames", false)
+    private var correctionJob: Job? = null
+    private var formRevision = 0
+
+    private fun namesEdited() {
+        formRevision++
+        correctionJob?.cancel()
+        _correcting.value = false
+        saved["canUndoNames"] = false
+        saved["correctionFailed"] = false
+        saved["autoNamesAttempted"] = true
+    }
+
+    fun fixNames() {
+        if (_busy.value || _correcting.value || !corrector.available || (title.value.isBlank() && author.value.isBlank())) return
+        val beforeTitle = title.value
+        val beforeAuthor = author.value
+        val revision = formRevision
+        saved["autoNamesAttempted"] = true
+        saved["correctionFailed"] = false
+        _correcting.value = true
+        correctionJob = viewModelScope.launch {
+            try {
+                val result = corrector.correct(beforeTitle, beforeAuthor)
+                if (revision != formRevision || title.value != beforeTitle || author.value != beforeAuthor) return@launch
+                when (result) {
+                    is Resource.Success -> {
+                        val nextTitle = result.data.title?.takeIf { beforeTitle.isNotBlank() } ?: beforeTitle
+                        val nextAuthor = result.data.author?.takeIf { beforeAuthor.isNotBlank() } ?: beforeAuthor
+                        if (nextTitle != beforeTitle || nextAuthor != beforeAuthor) {
+                            saved["undoTitle"] = beforeTitle
+                            saved["undoAuthor"] = beforeAuthor
+                            saved["bookTitle"] = nextTitle
+                            saved["author"] = nextAuthor
+                            saved["canUndoNames"] = true
+                        }
+                    }
+                    else -> saved["correctionFailed"] = true
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { if (revision == formRevision) saved["correctionFailed"] = true }
+            finally { if (revision == formRevision) _correcting.value = false }
+        }
+    }
+
+    fun undoNames() {
+        if (_busy.value || !canUndoNames.value) return
+        val oldTitle = saved.get<String>("undoTitle") ?: return
+        val oldAuthor = saved.get<String>("undoAuthor") ?: return
+        namesEdited()
+        saved["bookTitle"] = oldTitle
+        saved["author"] = oldAuthor
+    }
     private val _uiState = MutableStateFlow<UiState<List<DownloadItem>>>(UiState.Loading)
     val uiState = _uiState.asStateFlow()
     private val _error = MutableStateFlow<DownloadFormError?>(null)
@@ -39,14 +98,15 @@ class DownloadsViewModel @Inject constructor(
     val fileSelection = _fileSelection.asStateFlow()
     val folder = folders.folder.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     val wifiOnly = network.wifiOnly.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val isCatalogDownload = saved.get<String>("audiobookId") != null
     val author = saved.getStateFlow("author", "")
     val title = saved.getStateFlow("bookTitle", "")
     val magnet = saved.getStateFlow("magnet", "")
     val editingTree = saved.getStateFlow<String?>("editingTree", null)
     val editing = saved.getStateFlow<String?>("editing", null)
-    fun setAuthor(value: String) { saved["author"] = value }
-    fun setTitle(value: String) { saved["bookTitle"] = value }
-    fun setMagnet(value: String) { saved["magnet"] = value }
+    fun setAuthor(value: String) { namesEdited(); saved["authorTouched"] = true; saved["author"] = value }
+    fun setTitle(value: String) { namesEdited(); saved["titleTouched"] = true; saved["bookTitle"] = value }
+    fun setMagnet(value: String) { namesEdited(); saved["magnet"] = value }
     fun folderLabel(uri: String?) = folders.display(uri)
 
     init {
@@ -57,15 +117,18 @@ class DownloadsViewModel @Inject constructor(
         saved.get<String>("audiobookId")?.let { id -> viewModelScope.launch {
             when (val result = repository.getAudiobookDetail(id)) {
                 is Resource.Success -> {
-                    if (title.value.isBlank()) setTitle(result.data.title)
-                    if (author.value.isBlank() && result.data.author.lowercase() !in setOf("unknown", "unknown author")) setAuthor(result.data.author)
-                    if (magnet.value.isBlank()) setMagnet(result.data.torrentInfo?.magnetUri.orEmpty())
+                    if (editing.value != null) return@launch
+                    if (title.value.isBlank() && saved.get<Boolean>("titleTouched") != true) saved["bookTitle"] = result.data.title
+                    if (author.value.isBlank() && saved.get<Boolean>("authorTouched") != true && result.data.author.lowercase() !in setOf("unknown", "unknown author")) saved["author"] = result.data.author
+                    if (magnet.value.isBlank()) saved["magnet"] = result.data.torrentInfo?.magnetUri.orEmpty()
+                    if (saved.get<Boolean>("autoNamesAttempted") != true) fixNames()
                 }
                 else -> Unit
             }
         } }
     }
     fun selectFolder(uri: String) = action(DownloadFormError.FOLDER) {
+        namesEdited()
         folders.select(uri)
         if (editing.value != null) saved["editingTree"] = uri
     }
@@ -74,7 +137,7 @@ class DownloadsViewModel @Inject constructor(
         saved["editingTree"] = item.destinationTreeUri
         setAuthor(item.author.orEmpty()); setTitle(item.title)
     }
-    fun cancelEdit() { saved["editing"] = null; saved["editingTree"] = null }
+    fun cancelEdit() { namesEdited(); saved["editing"] = null; saved["editingTree"] = null }
 
     private suspend fun metadata(): DownloadMetadata {
         val tree = saved.get<String>("editingTree") ?: folders.folder.first().orEmpty()
@@ -86,17 +149,20 @@ class DownloadsViewModel @Inject constructor(
         return DownloadMetadata(author.value.trim(), title.value.trim(), tree)
     }
     fun startMagnet() = action {
+        if (_correcting.value) return@action
         val metadata = metadata()
         require(magnet.value.trim().startsWith("magnet:?"))
         manager.startDownload(saved.get<String>("audiobookId") ?: "import:${UUID.randomUUID()}", magnet.value.trim(), metadata).getOrThrow()
     }
     fun saveAndResume() = action {
+        if (_correcting.value) return@action
         val hash = checkNotNull(editing.value)
         manager.updateMetadata(hash, metadata()).getOrThrow()
         manager.resumeDownload(hash).getOrThrow()
         cancelEdit()
     }
     fun importTorrent(uri: String) = action {
+        if (_correcting.value) return@action
         val metadata = metadata()
         val file = storage.copyTorrent(uri)
         try { manager.startDownloadFromFile("import:${UUID.randomUUID()}", file, metadata).getOrThrow() }

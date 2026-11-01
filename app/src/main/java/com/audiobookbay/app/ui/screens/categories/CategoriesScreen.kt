@@ -28,7 +28,7 @@ fun CategoriesScreen(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("Categories") },
+            title = { Text(androidx.compose.ui.res.stringResource(com.audiobookbay.app.R.string.categories_title)) },
         )
         Box(
             modifier = Modifier
@@ -37,7 +37,7 @@ fun CategoriesScreen(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "Browse by Genre & Category",
+                text = androidx.compose.ui.res.stringResource(com.audiobookbay.app.R.string.categories_hint),
                 style = MaterialTheme.typography.headlineMedium,
             )
         }

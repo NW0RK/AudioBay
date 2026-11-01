@@ -1,21 +1,16 @@
 package com.audiobookbay.app.ui.navigation
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.navigation.NavHostController
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -29,54 +24,40 @@ import com.audiobookbay.app.ui.screens.home.HomeScreen
 import com.audiobookbay.app.ui.screens.search.SearchScreen
 import com.audiobookbay.app.ui.screens.settings.SettingsScreen
 
-private data class BottomNavItem(
-    val label: String,
-    val icon: ImageVector,
-    val route: NavRoute,
-)
-
-private val bottomNavItems = listOf(
-    BottomNavItem("Home", Icons.Default.Home, NavRoute.Home),
-    BottomNavItem("Search", Icons.Default.Search, NavRoute.Search),
-    BottomNavItem("Downloads", Icons.Default.Download, NavRoute.Downloads()),
-    BottomNavItem("Settings", Icons.Default.Settings, NavRoute.Settings),
-)
-
 @Composable
 fun AudioBookBayNavHost() {
     val navController = rememberNavController()
+    var homeResetToken by rememberSaveable { mutableIntStateOf(0) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
     Scaffold(
+        modifier = Modifier.imePadding(),
         bottomBar = {
-            NavigationBar {
-                bottomNavItems.forEach { item ->
-                    NavigationBarItem(
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        selected = currentDestination?.hasRoute(item.route::class) == true,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                    )
-                }
+            if (currentDestination?.hasRoute<NavRoute.AudiobookDetail>() != true) {
+                FloatingNavigationPill(
+                    selectedRoute = bottomNavItems.firstOrNull {
+                        currentDestination?.hasRoute(it.route::class) == true
+                    }?.route,
+                    onNavigate = { route ->
+                        if (route == NavRoute.Home) homeResetToken++
+                        navController.navigateToTab(route)
+                    },
+                    modifier = Modifier.navigationBarsPadding()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 20.dp, top = 8.dp),
+                )
             }
         },
     ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = NavRoute.Home,
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier.padding(top = innerPadding.calculateTopPadding()),
         ) {
             composable<NavRoute.Home> {
                 HomeScreen(
+                    resetToken = homeResetToken,
                     onNavigateToDetail = { id ->
                         navController.navigate(NavRoute.AudiobookDetail(id))
                     },
@@ -105,9 +86,21 @@ fun AudioBookBayNavHost() {
             composable<NavRoute.Downloads> {
                 DownloadsScreen()
             }
+            composable<NavRoute.Saved> {
+                com.audiobookbay.app.ui.screens.saved.SavedScreen { id -> navController.navigate(NavRoute.AudiobookDetail(id)) }
+            }
             composable<NavRoute.Settings> {
                 SettingsScreen()
             }
         }
+    }
+}
+
+/** Home is a destination, rather than a request to restore its saved nested stack. */
+internal fun NavHostController.navigateToTab(route: NavRoute) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = route != NavRoute.Home
     }
 }
