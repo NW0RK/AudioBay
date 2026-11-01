@@ -79,7 +79,7 @@ fun CrashReportSettings() {
             Text(stringResource(R.string.crashes_description), style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.crashes_export_description), style = MaterialTheme.typography.bodySmall)
             Button(shape = MaterialTheme.shapes.small, onClick = {
-                try { exporter.launch("AudioBay-diagnostics.txt"); openError = false }
+                try { exporter.launch("AudioHarbour-diagnostics.txt"); openError = false }
                 catch (_: Exception) { openError = true }
             }, enabled = !exporting) { Text(stringResource(R.string.crashes_export)) }
             if (exporting) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -104,7 +104,7 @@ fun CrashReportSettings() {
             if (reports.isNotEmpty()) {
                 OutlinedButton(shape = MaterialTheme.shapes.small, onClick = {
                     context.getSystemService(ClipboardManager::class.java).setPrimaryClip(
-                        ClipData.newPlainText("AudioBay crash reports", reports.joinToString("\n\n---\n\n")))
+                        ClipData.newPlainText("AudioHarbour crash reports", reports.joinToString("\n\n---\n\n")))
                     copied = true
                 }) { Text(stringResource(R.string.crashes_copy)) }
                 TextButton(shape = MaterialTheme.shapes.small, onClick = { copied = false; vm.refresh(clear = true) }) { Text(stringResource(R.string.crashes_delete)) }

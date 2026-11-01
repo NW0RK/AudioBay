@@ -171,7 +171,7 @@ class GitHubAppUpdateRepository @Inject constructor(
 
     private suspend fun text(url: String, limit: Long, downloading: Boolean = false): String {
         val request = Request.Builder().url(url).header("Accept", "application/vnd.github+json")
-            .header("User-Agent", "AudioBay/${BuildConfig.VERSION_NAME}").build()
+            .header("User-Agent", "AudioHarbour/${BuildConfig.VERSION_NAME}").build()
         val call = client.newCall(request)
         if (downloading) downloadCall = call
         return call.awaitResponse().use { response ->

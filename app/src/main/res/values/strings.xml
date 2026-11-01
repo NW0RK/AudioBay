@@ -1,5 +1,6 @@
 <resources>
-    <string name="app_name">AudioBookBay</string>
+    <string name="app_name">AudioHarbour</string>
+    <string name="app_name_short">AH</string>
     <string name="nav_home">Home</string>
     <string name="nav_search">Search</string>
     <string name="nav_library">Library</string>
@@ -19,7 +20,7 @@
     <string name="detail_title">Audiobook details</string>
     <string name="back">Back</string>
     <string name="narrated_by">Narrated by %1$s</string>
-    <string name="source_abb">AudioBookBay</string>
+    <string name="source_abb">AudioHarbour</string>
     <string name="read_more">Read more</string>
     <string name="show_less">Show less</string>
     <string name="chapters_count">Chapters (%1$d)</string>
@@ -148,7 +149,7 @@
     <string name="updates_title">App updates</string>
     <string name="updates_installed">Installed version: %1$s</string>
     <string name="updates_explanation">Checks GitHub when opened, at most once daily. Updates download only when you choose.</string>
-    <string name="updates_available">AudioBay %1$s is available</string>
+    <string name="updates_available">AudioHarbour %1$s is available</string>
     <string name="updates_check">Check for updates</string>
     <string name="updates_current">You have the latest compatible version.</string>
     <string name="updates_notes">Release notes</string>
@@ -163,11 +164,11 @@
     <string name="updates_rate_error">GitHub is limiting requests. Try again later.</string>
     <string name="updates_storage_error">Could not save the update. Check available storage and try again.</string>
     <string name="updates_checksum_error">The update failed its integrity check. Download it again.</string>
-    <string name="updates_package_error">This file is not a newer AudioBay update. Check for another release.</string>
+    <string name="updates_package_error">This file is not a newer AudioHarbour update. Check for another release.</string>
     <string name="updates_signature_error">This update uses a different signing certificate and cannot replace this installation. Keep your existing app installed.</string>
     <string name="updates_incompatible_error">This update is not compatible with this Android version or device.</string>
     <string name="updates_release_error">No usable release information was received. Try checking again later.</string>
-    <string name="updates_install_error">Installation did not start. Allow AudioBay to install updates in Android settings, then tap Install update again.</string>
+    <string name="updates_install_error">Installation did not start. Allow AudioHarbour to install updates in Android settings, then tap Install update again.</string>
     <string name="crashes_title">Crash reports</string>
     <string name="crashes_description">Reports stay on this phone until you choose to share them. After a crash, reopen the app and visit Settings. Report to GitHub opens an issue draft for you to review and submit; GitHub issues are public. Reports contain device details and stack frames, excluding exception messages and download details. Native crash details depend on Android availability. Interrupted torrent sessions and Android exit reasons are also recorded; these do not always indicate a crash. If no report appears, tap Create diagnostic report. Up to five reports are kept.</string>
     <string name="crashes_empty">No saved crash reports.</string>

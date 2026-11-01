@@ -29,3 +29,10 @@
 - [x] Preserve Android text scaling; scale app typography and line spacing together.
 - [x] Pass 135 unit tests, debug lint, public debug/release builds and three connected Android UI checks.
 - [x] Prepare version 0.2.2 (code 13), verify the existing upgrade certificate and generate the public APK checksum.
+
+## AudioHarbour branding — 0.2.3
+
+- [x] Rename visible app branding to AudioHarbour with AH short name.
+- [x] Generate and apply the flat ember lighthouse icon with flame inside the lantern chamber.
+- [x] Preserve installation identity, stored data, update compatibility and signing certificate.
+- [x] Verify combined changes with unit tests, lint and optimized public release build.

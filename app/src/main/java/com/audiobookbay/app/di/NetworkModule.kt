@@ -35,7 +35,7 @@ object NetworkModule {
             )
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
-                    .header("User-Agent", "AudioBookBayAndroid/${BuildConfig.VERSION_NAME}")
+                    .header("User-Agent", "AudioHarbour/${BuildConfig.VERSION_NAME}")
                     .build()
                 chain.proceed(request)
             }
