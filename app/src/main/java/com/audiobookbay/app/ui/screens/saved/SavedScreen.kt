@@ -39,7 +39,7 @@ fun SaveBookControl(book: Audiobook, vm: SavedViewModel = hiltViewModel()) {
 @Composable
 fun BookSummaryMetadata(book: Audiobook) {
     val summary = listOfNotNull(book.language, book.audioFormat, book.formattedSize).filter { it.isNotBlank() }.joinToString(" · ")
-    if (summary.isNotEmpty()) Text(summary, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    if (summary.isNotEmpty()) Text(summary, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 enum class SavedSort { Recent, Title, Author }
 fun sortSavedBooks(books: List<Audiobook>, sort: SavedSort): List<Audiobook> = when (sort) {

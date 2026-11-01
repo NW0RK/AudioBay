@@ -19,6 +19,11 @@ class AppearanceSettingsTest {
             val store = PreferenceDataStoreFactory.create(scope = scope) { File(temporaryFolder.root, "appearance.preferences_pb") }
             val settings = AppearanceSettings(store, Dispatchers.IO)
             assertEquals(100, settings.fontPercent.first())
+            assertEquals("dark", settings.theme.first())
+            settings.setTheme("system")
+            assertEquals("system", AppearanceSettings(store, Dispatchers.IO).theme.first())
+            store.edit { it[AppearanceSettings.THEME] = "unknown" }
+            assertEquals("dark", settings.theme.first())
             settings.setFontPercent(123)
             assertEquals(123, AppearanceSettings(store, Dispatchers.IO).fontPercent.first())
             settings.setFontPercent(300)

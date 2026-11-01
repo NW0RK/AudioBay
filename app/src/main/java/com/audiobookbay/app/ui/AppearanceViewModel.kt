@@ -12,6 +12,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AppearanceViewModel @Inject constructor(private val settings: AppearanceSettings) : ViewModel() {
+    val theme = settings.theme.stateIn(viewModelScope, SharingStarted.Eagerly, "dark")
+    fun setTheme(theme: String) { viewModelScope.launch {
+        try { settings.setTheme(theme); _saveFailed.value = false }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { _saveFailed.value = true }
+    } }
     val fontPercent = settings.fontPercent.stateIn(viewModelScope, SharingStarted.Eagerly, 100)
     private val _saveFailed = MutableStateFlow(false)
     val saveFailed = _saveFailed.asStateFlow()

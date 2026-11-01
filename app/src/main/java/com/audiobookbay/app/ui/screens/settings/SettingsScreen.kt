@@ -1,6 +1,9 @@
 package com.audiobookbay.app.ui.screens.settings
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import com.audiobookbay.app.ui.components.EditorialPanel
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -47,14 +50,24 @@ fun SettingsScreen() {
             } }
             EditorialPanel(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.network_section))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().toggleable(wifiOnly, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = vm::setWifiOnly), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.wifi_only_title), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.wifi_only_description), style = MaterialTheme.typography.bodySmall)
                 }
-                com.audiobookbay.app.ui.components.EditorialSwitch(checked = wifiOnly, onCheckedChange = vm::setWifiOnly)
+                com.audiobookbay.app.ui.components.EditorialSwitch(checked = wifiOnly, onCheckedChange = null)
             }
             if (networkError) Text(stringResource(R.string.network_settings_error), color = MaterialTheme.colorScheme.error)
+            } }
+            val selectedTheme by appearance.theme.collectAsStateWithLifecycle()
+            EditorialPanel(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp).selectableGroup()) {
+                Text(stringResource(R.string.theme_title), style = MaterialTheme.typography.titleMedium)
+                listOf("dark" to R.string.theme_dark, "light" to R.string.theme_light, "system" to R.string.theme_system).forEach { (value, label) ->
+                    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selectedTheme == value, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = { appearance.setTheme(value) }), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = selectedTheme == value, onClick = null)
+                        Text(stringResource(label), Modifier.padding(start = 12.dp))
+                    }
+                }
             } }
             AppearanceSettingsCard(fontPercent, fontSaveFailed, appearance::setFontPercent)
             ApiKeySettingsCard(apiKey, keyConfigured, keyBusy, keySaved,

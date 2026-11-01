@@ -94,6 +94,21 @@ class DownloadsViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
     private val _error = MutableStateFlow<DownloadFormError?>(null)
     val error = _error.asStateFlow()
+    private val _queueErrors = MutableStateFlow<Set<String>>(emptySet())
+    val queueErrors = _queueErrors.asStateFlow()
+    private val _pendingItem = MutableStateFlow<Set<String>>(emptySet())
+    val pendingItem = _pendingItem.asStateFlow()
+    private fun queueAction(hash: String, block: suspend () -> Unit) {
+        if (hash in _pendingItem.value) return
+        _pendingItem.update { it + hash }
+        _queueErrors.update { it - hash }
+        viewModelScope.launch {
+            try { block() }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { _queueErrors.update { it + hash } }
+            finally { _pendingItem.update { it - hash } }
+        }
+    }
     private val _busy = MutableStateFlow(false)
     val busy = _busy.asStateFlow()
     private val _fileSelection = MutableStateFlow<FileSelection?>(null)
@@ -176,21 +191,23 @@ class DownloadsViewModel @Inject constructor(
         try { manager.startDownloadFromFile("import:${UUID.randomUUID()}", file, metadata).getOrThrow() }
         finally { withContext(NonCancellable) { storage.deleteTemporary(file) } }
     }
-    fun pause(hash: String) = action { manager.initialize(); manager.pauseDownload(hash).getOrThrow() }
+    fun pause(hash: String) = queueAction(hash) { manager.initialize(); manager.pauseDownload(hash).getOrThrow() }
     fun resume(item: DownloadItem) {
         if (item.author.isNullOrBlank() || item.destinationTreeUri.isNullOrBlank() || item.status == DownloadStatus.PUBLICATION_FAILED) edit(item)
-        else action { manager.resumeDownload(item.infoHash).getOrThrow() }
+        else queueAction(item.infoHash) { manager.resumeDownload(item.infoHash).getOrThrow() }
     }
-    fun cancel(hash: String) = action { manager.cancelDownload(hash, deleteFiles = false).getOrThrow() }
-    fun showFiles(item: DownloadItem) = action {
+    fun cancel(hash: String) = queueAction(hash) { manager.cancelDownload(hash, deleteFiles = false).getOrThrow() }
+    fun showFiles(item: DownloadItem) = queueAction(item.infoHash) {
         _fileSelection.value = FileSelection(item.infoHash, item.title, manager.listFiles(item.infoHash).getOrThrow())
     }
     fun dismissFiles() { _fileSelection.value = null }
-    fun applyFiles(selected: Set<Int>) = action {
-        val current = _fileSelection.value ?: return@action
+    fun applyFiles(selected: Set<Int>) {
+        val current = _fileSelection.value ?: return
+        queueAction(current.infoHash) {
         val audio = current.files.filter { it.isAudioFile }
         manager.setFilePriorities(current.infoHash, audio.associate { it.index to (it.index in selected) }).getOrThrow()
         _fileSelection.value = null
+        }
     }
     fun dismissError() { _error.value = null }
     private fun action(reason: DownloadFormError = DownloadFormError.ACTION, block: suspend () -> Unit) {

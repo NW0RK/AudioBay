@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.audiobookbay.app.data.storage.DownloadFolderSettings
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.*
 import com.audiobookbay.app.ui.components.EditorialPanel
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -35,6 +37,9 @@ fun DownloadsScreen(onBrowse: () -> Unit = {}) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
+    val queueErrors by vm.queueErrors.collectAsStateWithLifecycle()
+    val pendingItem by vm.pendingItem.collectAsStateWithLifecycle()
+    var removal by remember { mutableStateOf<DownloadItem?>(null) }
     val correcting by vm.correcting.collectAsStateWithLifecycle()
     val correctionAvailable by vm.correctionAvailability.collectAsStateWithLifecycle()
     val correctionFailed by vm.correctionFailed.collectAsStateWithLifecycle()
@@ -96,27 +101,33 @@ fun DownloadsScreen(onBrowse: () -> Unit = {}) {
                 is UiState.Success -> {
                     if (result.data.isEmpty()) item { com.audiobookbay.app.ui.components.MessageState(stringResource(R.string.no_downloads), stringResource(R.string.download_empty_hint), stringResource(R.string.browse_audiobooks), onBrowse) }
                     items(result.data, key = { it.id }) { download ->
+                        val itemBusy = download.infoHash in pendingItem
                         EditorialPanel(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(download.title, style = MaterialTheme.typography.titleLarge)
                                 download.author?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 com.audiobookbay.app.ui.components.DownloadStatusBadge(download.status)
                                 val publishing = download.status in setOf(DownloadStatus.PUBLISHING, DownloadStatus.PUBLICATION_FAILED)
-                                com.audiobookbay.app.ui.components.DownloadProgress(download)
+                                val completed = download.status in setOf(DownloadStatus.COMPLETED, DownloadStatus.SEEDING) && download.publishedFolderUri != null
+                                if (!completed) com.audiobookbay.app.ui.components.DownloadProgress(download)
                                 if (publishing) Text(stringResource(R.string.publication_stats, (download.publicationProgress * 100).toInt()))
-                                else Text(stringResource(R.string.download_stats, (download.progress * 100).toInt(), String.format(Locale.getDefault(), "%.1f", download.downloadSpeedBytesPerSec / 1024.0), download.peers))
+                                else if (!completed) Text(stringResource(R.string.download_stats, (download.progress * 100).toInt(), String.format(Locale.getDefault(), "%.1f", download.downloadSpeedBytesPerSec / 1024.0), download.peers))
                                 if (download.status == DownloadStatus.DOWNLOADING) {
                                     formatRemainingTime(download.etaSeconds)?.let { remaining ->
                                         Text(stringResource(R.string.download_eta, remaining), style = MaterialTheme.typography.bodySmall)
                                     }
                                 }
                                 if (download.status == DownloadStatus.PUBLICATION_FAILED) Text(stringResource(R.string.publication_retry_hint))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (completed) Text(vm.folderLabel(download.publishedFolderUri), style = MaterialTheme.typography.bodySmall)
+                                if (itemBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                                if (download.infoHash in queueErrors) Text(stringResource(R.string.queue_action_failed), color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     when {
                                         download.status in setOf(DownloadStatus.PAUSED, DownloadStatus.ERROR, DownloadStatus.PUBLICATION_FAILED, DownloadStatus.WAITING_FOR_WIFI) || (download.status == DownloadStatus.COMPLETED && download.publishedFolderUri == null) ->
-                                            TextButton(shape = MaterialTheme.shapes.small, onClick = { vm.resume(download) }, enabled = !busy) { Text(stringResource(R.string.resume)) }
+                                            TextButton(shape = MaterialTheme.shapes.small, onClick = { vm.resume(download) }, enabled = !itemBusy) { Text(stringResource(if (download.status == DownloadStatus.PUBLICATION_FAILED) R.string.retry_saving else R.string.resume)) }
                                         download.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING) ->
-                                            TextButton(shape = MaterialTheme.shapes.small, onClick = { vm.pause(download.infoHash) }, enabled = !busy) { Text(stringResource(R.string.pause)) }
+                                            TextButton(shape = MaterialTheme.shapes.small, onClick = { vm.pause(download.infoHash) }, enabled = !itemBusy) { Text(stringResource(R.string.pause)) }
                                     }
                                     download.publishedFolderUri?.let { uri ->
                                         TextButton(shape = MaterialTheme.shapes.small, onClick = {
@@ -129,9 +140,9 @@ fun DownloadsScreen(onBrowse: () -> Unit = {}) {
                                         IconButton(shape = MaterialTheme.shapes.small, onClick = { menu = true }) { Icon(androidx.compose.material.icons.Icons.Default.MoreVert, stringResource(R.string.more_actions)) }
                                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                                             if (download.status in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.WAITING_FOR_WIFI, DownloadStatus.ERROR)) {
-                                                DropdownMenuItem(text = { Text(stringResource(R.string.select_files)) }, enabled = !busy, onClick = { menu = false; vm.showFiles(download) })
+                                                DropdownMenuItem(text = { Text(stringResource(R.string.select_files)) }, enabled = !itemBusy, onClick = { menu = false; vm.showFiles(download) })
                                             }
-                                            DropdownMenuItem(text = { Text(stringResource(R.string.remove_queue_only)) }, enabled = !busy, onClick = { menu = false; vm.cancel(download.infoHash) })
+                                            DropdownMenuItem(text = { Text(stringResource(R.string.remove_queue_only)) }, enabled = !itemBusy, onClick = { menu = false; if (completed) vm.cancel(download.infoHash) else removal = download })
                                         }
                                     }
                                 }
@@ -141,6 +152,12 @@ fun DownloadsScreen(onBrowse: () -> Unit = {}) {
                 }
             }
         }
+    }
+    removal?.let { download ->
+        AlertDialog(onDismissRequest = { removal = null }, title = { Text(stringResource(R.string.remove_unfinished_title)) },
+            text = { Text(stringResource(R.string.remove_unfinished_message)) },
+            confirmButton = { TextButton(onClick = { vm.cancel(download.infoHash); removal = null }) { Text(stringResource(R.string.remove_queue_only)) } },
+            dismissButton = { TextButton(onClick = { removal = null }) { Text(stringResource(R.string.cancel_edit)) } })
     }
     fileSelection?.let { selection ->
         val audio = remember(selection) { selection.files.filter { it.isAudioFile } }
@@ -154,16 +171,14 @@ fun DownloadsScreen(onBrowse: () -> Unit = {}) {
                     LazyColumn(Modifier.heightIn(max = 320.dp)) {
                         items(audio, key = { it.index }) { file ->
                             Row(
-                                Modifier.fillMaxWidth().clickable {
+                                Modifier.fillMaxWidth().toggleable(file.index in checked, role = Role.Checkbox) {
                                     checked = if (file.index in checked) checked - file.index else checked + file.index
                                 },
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Checkbox(
                                     checked = file.index in checked,
-                                    onCheckedChange = { selected ->
-                                        checked = if (selected) checked + file.index else checked - file.index
-                                    },
+                                    onCheckedChange = null,
                                 )
                                 Text(file.path, style = MaterialTheme.typography.bodySmall)
                             }
@@ -172,7 +187,7 @@ fun DownloadsScreen(onBrowse: () -> Unit = {}) {
                 }
             },
             confirmButton = {
-                TextButton(shape = MaterialTheme.shapes.small, onClick = { vm.applyFiles(checked) }, enabled = checked.isNotEmpty() && !busy) {
+                TextButton(shape = MaterialTheme.shapes.small, onClick = { vm.applyFiles(checked) }, enabled = checked.isNotEmpty() && selection.infoHash !in pendingItem) {
                     Text(stringResource(R.string.apply))
                 }
             },

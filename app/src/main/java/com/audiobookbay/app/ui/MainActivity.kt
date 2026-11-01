@@ -25,7 +25,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val fontPercent by appearance.fontPercent.collectAsStateWithLifecycle()
-            AudioBookBayTheme(fontPercent = fontPercent) {
+            val theme by appearance.theme.collectAsStateWithLifecycle()
+            val dark = when (theme) { "light" -> false; "system" -> androidx.compose.foundation.isSystemInDarkTheme(); else -> true }
+            androidx.compose.runtime.SideEffect {
+                androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !dark
+                    isAppearanceLightNavigationBars = !dark
+                }
+            }
+            AudioBookBayTheme(darkTheme = dark, fontPercent = fontPercent) {
                 AudioBookBayNavHost()
                 AppUpdateAnnouncement(updates)
             }

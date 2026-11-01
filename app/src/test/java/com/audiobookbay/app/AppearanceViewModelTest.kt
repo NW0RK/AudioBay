@@ -17,6 +17,7 @@ class AppearanceViewModelTest {
             val settings = mockk<AppearanceSettings>()
             val saved = MutableStateFlow(100)
             every { settings.fontPercent } returns saved
+            every { settings.theme } returns flowOf("dark")
             coEvery { settings.setFontPercent(any()) } throws java.io.IOException("disk unavailable")
             val vm = AppearanceViewModel(settings)
             vm.setFontPercent(120)

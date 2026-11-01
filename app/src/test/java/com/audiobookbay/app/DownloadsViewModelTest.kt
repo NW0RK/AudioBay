@@ -163,7 +163,8 @@ class DownloadsViewModelTest {
         val vm = vm()
         val item = DownloadItem("hash", "id", "Book", "hash", "staging", author = "Author", destinationTreeUri = "content://books")
         vm.resume(item); vm.resume(item); runCurrent()
-        assertEquals(DownloadFormError.ACTION, vm.error.value)
+        assertNull(vm.error.value)
+        assertEquals(setOf("hash"), vm.queueErrors.value)
         coVerify(exactly = 1) { manager.resumeDownload("hash") }
     }
     @Test fun legacyDownloadPromptsForMissingMetadata() = runTest(dispatcher) {
@@ -198,5 +199,17 @@ class DownloadsViewModelTest {
         runCurrent()
         assertEquals("", vm.author.value)
         assertEquals("Book Title", vm.title.value)
+    }
+    @Test fun queueFailureStaysOnItsItemAndRetryClearsIt() = runTest(dispatcher) {
+        coEvery { manager.initialize() } returns Unit
+        coEvery { manager.pauseDownload("hash") } returns Result.failure(IllegalStateException("offline"))
+        val vm = vm()
+        vm.pause("hash"); runCurrent()
+        assertEquals(setOf("hash"), vm.queueErrors.value)
+        assertNull(vm.error.value)
+        assertTrue(vm.pendingItem.value.isEmpty())
+        coEvery { manager.pauseDownload("hash") } returns Result.success(Unit)
+        vm.pause("hash"); runCurrent()
+        assertTrue(vm.queueErrors.value.isEmpty())
     }
 }

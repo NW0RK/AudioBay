@@ -53,7 +53,7 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
                 val list = rememberLazyListState()
                 Box(Modifier.fillMaxSize()) {
                     LazyColumn(state = list, modifier = Modifier.testTag("detail_content").fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                        contentPadding = PaddingValues(bottom = if (book.torrentInfo?.magnetUri != null) 120.dp else 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                     item {
                         var ratio by remember(book.coverImageUrl) { mutableFloatStateOf(1f) }
                         AsyncImage(model = book.coverImageUrl, contentDescription = null,
@@ -150,15 +150,18 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
                         Text(book.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.align(Alignment.Center).padding(horizontal = 72.dp), style = MaterialTheme.typography.titleMedium)
                     }
-                    if (book.torrentInfo?.magnetUri != null) FilledIconButton(onClick = { onDownload(book.id) },
-                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)) {
-                        Icon(Icons.Default.Download, stringResource(R.string.start_download))
+                    if (book.torrentInfo?.magnetUri != null) Surface(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
+                        Button(onClick = { onDownload(book.id) }, shape = MaterialTheme.shapes.small, modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                            Icon(Icons.Default.Download, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.prepare_download))
+                        }
                     }
                 }
             }
         }
         Box(
-            modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 8.dp).size(44.dp)
+            modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 8.dp).size(48.dp)
                 .clip(MaterialTheme.shapes.small)
                 .background(MaterialTheme.colorScheme.surface)
 

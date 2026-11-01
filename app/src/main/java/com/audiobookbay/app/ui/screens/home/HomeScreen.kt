@@ -49,7 +49,7 @@ fun HomeScreen(onNavigateToDetail: (String) -> Unit, resetToken: Int = 0, onCate
     val generating by vm.generating.collectAsStateWithLifecycle()
     val failed by vm.discoveryError.collectAsStateWithLifecycle()
     HomeScreen(state, vm::refresh, vm::loadMore, vm::retry, onNavigateToDetail, resetToken, categories, onCategory, actions, onDownload,
-        discoveryHeader = { DiscoverySection(picks, history.isNotEmpty(), available, generating, failed, vm::generatePicks, onSettings, onNavigateToDetail) })
+        discoveryHeader = { DiscoverySection(picks, history.isNotEmpty(), available, generating, failed, vm::generatePicks, onSettings, onNavigateToDetail) }, discoveryLeads = picks.isNotEmpty())
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,6 +60,7 @@ fun HomeScreen(
     categories: List<Category> = emptyList(), onCategory: (String?) -> Unit = {},
     actions: CatalogActions? = null, onDownload: (String?) -> Unit = {},
     discoveryHeader: @Composable () -> Unit = {},
+    discoveryLeads: Boolean = true,
 ) {
     val content = (state as? UiState.Success)?.data
     val grid = rememberLazyGridState()
@@ -82,7 +83,7 @@ fun HomeScreen(
         PullToRefreshBox(isRefreshing = content?.isRefreshing == true, onRefresh = onRefresh) {
             LazyVerticalGrid(columns = GridCells.Fixed(2), state = grid, modifier = Modifier.fillMaxSize().testTag("discovery_grid"),
                 contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                item(span = { GridItemSpan(maxLineSpan) }) { discoveryHeader() }
+                if (discoveryLeads) item(span = { GridItemSpan(maxLineSpan) }) { discoveryHeader() }
                 when (state) {
                     UiState.Idle, UiState.Loading -> item(span = { GridItemSpan(maxLineSpan) }) { LinearProgressIndicator(Modifier.fillMaxWidth()) }
                     is UiState.Error -> item(span = { GridItemSpan(maxLineSpan) }) {
@@ -114,6 +115,7 @@ fun HomeScreen(
                 items(categories.take(6), key = { it.slug }) { category ->
                     OutlinedButton(shape = MaterialTheme.shapes.small, onClick = { onCategory(category.slug) }, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) { Text(category.displayName) }
                 }
+                if (!discoveryLeads) item(span = { GridItemSpan(maxLineSpan) }) { discoveryHeader() }
                 if (content != null) {
                     item(span = { GridItemSpan(maxLineSpan) }) { SectionHeading(stringResource(R.string.catalog_shelf)) }
                     items(content.books.drop(12), key = { "${it.source}:${it.id}" }, span = { GridItemSpan(maxLineSpan) }) { book ->

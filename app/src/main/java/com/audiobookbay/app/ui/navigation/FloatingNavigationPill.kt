@@ -38,17 +38,24 @@ internal val bottomNavItems = listOf(
 @Composable
 internal fun FloatingNavigationPill(selectedRoute: NavRoute?, onNavigate: (NavRoute) -> Unit, modifier: Modifier = Modifier) {
     BoxWithConstraints(modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
-        val cellWidth = maxWidth / bottomNavItems.size
-        val selectedIndex = bottomNavItems.indexOfFirst { selectedRoute?.let { route -> route::class == it.route::class } == true }.coerceAtLeast(0)
-        val underline by androidx.compose.animation.core.animateDpAsState(cellWidth * selectedIndex + (cellWidth - 24.dp) / 2, tween(180), label = "Navigation rule")
-        Box(Modifier.offset(x = underline).width(24.dp).height(2.dp).background(MaterialTheme.colorScheme.primary))
-        Row(Modifier.fillMaxWidth().heightIn(min = 68.dp).selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
-            bottomNavItems.forEach { item ->
-                val selected = selectedRoute?.let { it::class == item.route::class } == true
-                val tint by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, tween(140), label = "Navigation tint")
-                Column(Modifier.weight(1f).heightIn(min = 68.dp).selectable(selected, role = Role.Tab, onClick = { onNavigate(item.route) }).padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(item.icon, stringResource(item.label), Modifier.size(22.dp), tint = tint)
-                    androidx.compose.material3.Text(stringResource(item.label), color = tint, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        val textSize = MaterialTheme.typography.labelSmall.fontSize.value * androidx.compose.ui.platform.LocalDensity.current.fontScale
+        val minimumCell = (textSize * 5.8f).dp
+        val columns = when { maxWidth / 5 >= minimumCell -> 5; maxWidth / 3 >= minimumCell -> 3; else -> 2 }
+        Column(Modifier.fillMaxWidth().selectableGroup()) {
+            bottomNavItems.chunked(columns).forEach { row ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                    row.forEach { item ->
+                        val selected = selectedRoute?.let { it::class == item.route::class } == true
+                        val tint by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, tween(140), label = "Navigation tint")
+                        Column(Modifier.weight(1f).heightIn(min = 68.dp).selectable(selected, role = Role.Tab, onClick = { onNavigate(item.route) }).padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(Modifier.width(24.dp).height(2.dp).background(if (selected) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent))
+                            Spacer(Modifier.height(4.dp))
+                            Icon(item.icon, stringResource(item.label), Modifier.size(22.dp), tint = tint)
+                            androidx.compose.material3.Text(stringResource(item.label), color = tint, style = MaterialTheme.typography.labelSmall,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        }
+                    }
+                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }

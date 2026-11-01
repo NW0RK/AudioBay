@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 
@@ -53,7 +55,7 @@ fun EditorialActionButton(
 
 @Composable
 fun SectionHeading(text: String) {
-    Text(text, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 8.dp))
+    Text(text, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() }.padding(vertical = 8.dp))
 }
 
 @Composable

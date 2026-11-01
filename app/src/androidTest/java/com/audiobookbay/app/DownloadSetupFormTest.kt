@@ -86,11 +86,13 @@ class DownloadSetupFormTest {
         compose.runOnIdle { assertEquals(1, corrected); assertEquals(1, undone) }
     }
 
-    @Test fun missingMetadataAndFolderBlockStarting() {
+    @Test fun missingMetadataAndFolderShowValidationBeforeStarting() {
         state = state.copy(author = "", folderSelected = false)
         render()
         compose.onNodeWithTag("download_author").assertExists()
-        compose.onNodeWithTag("start_download").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("start_download").performScrollTo().assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(0, started) }
+        compose.onNodeWithText("Required").assertExists()
         compose.onNodeWithText("Choose", substring = false).performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, picked); state = state.copy(author = "An author", folderSelected = true) }
         compose.onNodeWithTag("start_download").performScrollTo().assertIsEnabled().performClick()
@@ -112,7 +114,9 @@ class DownloadSetupFormTest {
         render()
         compose.onNodeWithTag("download_title").assertExists()
         compose.onNodeWithTag("download_magnet").assertExists()
-        compose.onNodeWithTag("start_download").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("start_download").performScrollTo().assertIsEnabled().performClick()
+        compose.onNodeWithText("Enter a magnet link beginning with magnet:?").assertExists()
+        compose.runOnIdle { assertEquals(0, started) }
         compose.onNodeWithText("Open torrent").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, imported) }
     }

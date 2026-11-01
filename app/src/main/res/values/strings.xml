@@ -221,4 +221,16 @@
     <string name="font_size_sample">Find your next audiobook. English · M4B</string>
     <string name="font_size_reset">Reset to 100%</string>
     <string name="appearance_save_error">Could not save font size. Please try again.</string>
+    <string name="prepare_download">Prepare download</string>
+    <string name="starting_download">Starting download…</string>
+    <string name="field_required">Required</string>
+    <string name="invalid_magnet">Enter a magnet link beginning with magnet:?</string>
+    <string name="retry_saving">Retry saving</string>
+    <string name="queue_action_failed">This action could not be completed. Try again.</string>
+    <string name="remove_unfinished_title">Remove unfinished download?</string>
+    <string name="remove_unfinished_message">This stops the transfer and removes it from the queue. Shared files stay. To continue later, add the torrent again.</string>
+    <string name="theme_title">Color theme</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_system">System</string>
 </resources>

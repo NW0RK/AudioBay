@@ -12,9 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-@Composable fun EditorialSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+@Composable fun EditorialSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?) {
     val position by animateDpAsState(if (checked) 22.dp else 4.dp, tween(140), label = "Preference position")
-    Box(Modifier.size(52.dp,48.dp).toggleable(checked, role = Role.Switch, onValueChange = onCheckedChange), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(52.dp,48.dp).then(if (onCheckedChange != null) Modifier.toggleable(checked, role = Role.Switch, onValueChange = onCheckedChange) else Modifier), contentAlignment = Alignment.Center) {
         Box(Modifier.size(44.dp,26.dp).clip(RoundedCornerShape(6.dp)).background(if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest)) {
             Box(Modifier.offset(x = position,y = 4.dp).size(18.dp).clip(RoundedCornerShape(3.dp)).background(if (checked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant))
         }

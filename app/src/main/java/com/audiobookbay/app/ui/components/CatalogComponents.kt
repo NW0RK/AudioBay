@@ -14,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
@@ -65,7 +67,7 @@ fun DownloadStatusBadge(status: DownloadStatus) {
         DownloadTone.Error -> tokens.error
         DownloadTone.Neutral -> com.audiobookbay.app.ui.theme.StatusColors(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
     }
-    Surface(color = colors.container, contentColor = colors.onContainer, shape = MaterialTheme.shapes.small) {
+    Surface(modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }, color = colors.container, contentColor = colors.onContainer, shape = MaterialTheme.shapes.small) {
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(when (tone) {
                 DownloadTone.Success -> Icons.Outlined.CheckCircle
@@ -106,7 +108,7 @@ fun AudiobookCard(
     val scale by animateFloatAsState(1f, tween(140), label = "Cover press")
     val alpha by animateFloatAsState(if (pressed) 0.96f else 1f, tween(140), label = "Cover feedback")
     Box(modifier.graphicsLayer { scaleX = scale; scaleY = scale; this.alpha = alpha }
-        .clickable(interactionSource = interaction, indication = null, onClick = onClick)) {
+        .clickable(interactionSource = interaction, indication = QuietIndication, onClick = onClick)) {
         if (compact) {
             Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 BookCover(book, Modifier.width(88.dp).height(128.dp))
@@ -140,11 +142,11 @@ private fun BookCardText(book: Audiobook, state: BookCardState, onSave: () -> Un
             val format = book.audioFormat.orEmpty().trim()
             if (language.isNotEmpty() || format.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
                 if (language.isNotEmpty()) Text(language, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    modifier = Modifier.weight(1f, fill = false), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (language.isNotEmpty() && format.isNotEmpty()) Text(" \u00B7 ", style = MaterialTheme.typography.labelMedium)
-                if (format.isNotEmpty()) Text(format, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                if (format.isNotEmpty()) Text(format, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            book.formattedSize?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }
+            book.formattedSize?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         } else BookSummaryMetadata(book)
         state.download?.let {
             DownloadStatusBadge(it.status)

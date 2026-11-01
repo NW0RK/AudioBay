@@ -7,7 +7,10 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -62,6 +65,27 @@ internal fun DownloadSetupForm(
     onFixNames: () -> Unit = {},
     onUndoNames: () -> Unit = {},
 ) {
+    var attempted by remember { mutableStateOf(false) }
+    var validateLink by remember { mutableStateOf(true) }
+    val titleFocus = remember { FocusRequester() }
+    val authorFocus = remember { FocusRequester() }
+    val folderFocus = remember { FocusRequester() }
+    val magnetFocus = remember { FocusRequester() }
+    val invalidLink = !state.magnet.trim().startsWith("magnet:?")
+    fun submit(needsLink: Boolean, action: () -> Unit) {
+        attempted = true
+        validateLink = needsLink
+        when {
+            state.title.isBlank() -> titleFocus.requestFocus()
+            state.author.isBlank() -> authorFocus.requestFocus()
+            !state.folderSelected -> folderFocus.requestFocus()
+            needsLink && invalidLink -> Unit
+            else -> action()
+        }
+    }
+    LaunchedEffect(attempted, state.magnet) {
+        if (attempted && validateLink && invalidLink && !state.metadataMissing && state.folderSelected) magnetFocus.requestFocus()
+    }
     val expanded = state.expanded || state.editingDownload
     EditorialPanel(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -80,10 +104,14 @@ internal fun DownloadSetupForm(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(state.title, onTitleChange, enabled = !state.busy,
                             label = { Text(stringResource(R.string.download_book_title)) },
-                            singleLine = true, modifier = Modifier.fillMaxWidth().testTag("download_title"))
+                            isError = attempted && state.title.isBlank(),
+                            supportingText = { if (attempted && state.title.isBlank()) Text(stringResource(R.string.field_required)) },
+                            singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(titleFocus).testTag("download_title"))
                         OutlinedTextField(state.author, onAuthorChange, enabled = !state.busy,
                             label = { Text(stringResource(R.string.download_author)) },
-                            singleLine = true, modifier = Modifier.fillMaxWidth().testTag("download_author"))
+                            isError = attempted && state.author.isBlank(),
+                            supportingText = { if (attempted && state.author.isBlank()) Text(stringResource(R.string.field_required)) },
+                            singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(authorFocus).testTag("download_author"))
                         if (state.metadataMissing) Text(stringResource(R.string.download_metadata_hint),
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (state.editingMetadata && !state.metadataMissing && state.catalogBook && !state.editingDownload) {
@@ -101,7 +129,7 @@ internal fun DownloadSetupForm(
                     }
                 }
                 if (state.correctionAvailable) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(shape = MaterialTheme.shapes.small, onClick = onFixNames,
                             enabled = !state.busy && !state.correcting && (state.title.isNotBlank() || state.author.isNotBlank()),
                             modifier = Modifier.testTag("fix_book_names")) {
@@ -128,7 +156,7 @@ internal fun DownloadSetupForm(
                             Text(if (state.folderSelected) state.folderLabel.trimEnd('/').substringAfterLast('/') else stringResource(R.string.choose_folder),
                                 style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
-                        TextButton(shape = MaterialTheme.shapes.small, onClick = onChooseFolder, enabled = !state.busy) {
+                        TextButton(shape = MaterialTheme.shapes.small, onClick = onChooseFolder, enabled = !state.busy, modifier = Modifier.focusRequester(folderFocus)) {
                             Text(stringResource(if (state.folderSelected) R.string.download_change else R.string.download_choose))
                         }
                     }
@@ -140,11 +168,14 @@ internal fun DownloadSetupForm(
                             modifier = Modifier.testTag("download_full_location"))
                     }
                 }
+                if ((attempted && !state.folderSelected) || state.error == DownloadFormError.FOLDER) Text(stringResource(if (state.error == DownloadFormError.FOLDER) R.string.folder_access_error else R.string.choose_folder), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 if (!state.editingDownload) {
-                    if (!state.catalogBook || state.editingLink || state.magnet.isBlank()) {
+                    if (!state.catalogBook || state.editingLink || state.magnet.isBlank() || (attempted && validateLink && invalidLink)) {
                         OutlinedTextField(state.magnet, onMagnetChange, enabled = !state.busy,
                             label = { Text(stringResource(R.string.magnet_link)) }, singleLine = true,
-                            modifier = Modifier.fillMaxWidth().testTag("download_magnet"))
+                            isError = attempted && validateLink && invalidLink,
+                            supportingText = { if (attempted && validateLink && invalidLink) Text(stringResource(R.string.invalid_magnet)) },
+                            modifier = Modifier.fillMaxWidth().focusRequester(magnetFocus).testTag("download_magnet"))
                         if (state.catalogBook && state.editingLink && state.magnet.isNotBlank()) {
                             TextButton(shape = MaterialTheme.shapes.small, onClick = onToggleLink, enabled = !state.busy) { Text(stringResource(R.string.download_done)) }
                         }
@@ -169,17 +200,17 @@ internal fun DownloadSetupForm(
                 }
                 if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (state.editingDownload) {
-                    Button(shape = MaterialTheme.shapes.small, onClick = onSaveResume, enabled = state.ready) { Text(stringResource(R.string.save_resume)) }
+                    Button(shape = MaterialTheme.shapes.small, onClick = { submit(false, onSaveResume) }, enabled = !state.busy && !state.correcting) { Text(stringResource(R.string.save_resume)) }
                     TextButton(shape = MaterialTheme.shapes.small, onClick = onCancelEdit, enabled = !state.busy) { Text(stringResource(R.string.cancel_edit)) }
                 } else {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        EditorialActionButton(Icons.Default.Download, stringResource(R.string.start_download),
-                            onClick = onStart, enabled = state.ready && state.magnet.isNotBlank(), modifier = Modifier.testTag("start_download"))
-                        TextButton(shape = MaterialTheme.shapes.small, onClick = onStart, enabled = state.ready && state.magnet.isNotBlank()) {
-                            Text(stringResource(R.string.start_download), style = MaterialTheme.typography.titleMedium)
-                        }
+                    Button(shape = MaterialTheme.shapes.small, onClick = { submit(true, onStart) }, enabled = !state.busy && !state.correcting,
+                        modifier = Modifier.fillMaxWidth().testTag("start_download")) {
+                        if (state.busy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Default.Download, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.start_download))
                     }
-                    if (!state.catalogBook) OutlinedButton(shape = MaterialTheme.shapes.small, onClick = onOpenTorrent, enabled = state.ready) { Text(stringResource(R.string.open_torrent)) }
+                    if (!state.catalogBook) OutlinedButton(shape = MaterialTheme.shapes.small, onClick = { submit(false, onOpenTorrent) }, enabled = !state.busy && !state.correcting) { Text(stringResource(R.string.open_torrent)) }
                 }
             }
         }

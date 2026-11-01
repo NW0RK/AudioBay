@@ -50,7 +50,9 @@ class FloatingNavigationPillTest {
         val bounds = compose.onAllNodes(isSelectable()).fetchSemanticsNodes().map { it.boundsInRoot }
         assertEquals(5, bounds.size)
         bounds.forEach { assertEquals(bounds.first().width, it.width, 1f) }
-        bounds.zipWithNext().forEach { (left, right) -> assertEquals(left.right, right.left, 1f) }
+        bounds.groupBy { it.top }.values.forEach { row ->
+            row.zipWithNext().forEach { (left, right) -> assertEquals(left.right, right.left, 1f) }
+        }
     }
 
     @Test fun narrowDarkLayoutHasEqualSpacing() = verifyLayout(288, true)

@@ -41,3 +41,11 @@
 
 - [x] Remove the Your next good story motto and its occupied header space.
 - [x] Pass unit tests, lint and public optimized build; preserve the signing certificate and generate release checksum.
+
+## UI/UX refinement - 0.2.5
+
+- [x] Apply interface-design and Vercel review recommendations while retaining the editorial identity and downloader-only scope.
+- [x] Unify download actions, validate inputs inline, isolate queue failures and clarify completion/publication states.
+- [x] Add persistent Dark/Light/System themes, labeled toggle targets, focus feedback and adaptive large-text navigation.
+- [x] Verify 136 unit tests, lint and public debug/release builds; inspect Galaxy A52 screenshots and pass 23 focused device checks.
+- [x] Prepare version 0.2.5 (code 16), preserve the upgrade certificate, exclude private build-time credentials and generate APK checksum.
