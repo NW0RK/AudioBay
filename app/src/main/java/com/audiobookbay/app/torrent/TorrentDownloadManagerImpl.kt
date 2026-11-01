@@ -283,7 +283,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
 
     override suspend fun resumeDownload(infoHash: String): Result<Unit> = operation {
         loadRecordsLocked()
-        val saved = records[infoHash] ?: error("Download not found")
+        var saved = records[infoHash] ?: error("Download not found")
         require(!saved.item.author.isNullOrBlank() && !saved.item.destinationTreeUri.isNullOrBlank()) { "Enter author, title and shared folder before resuming" }
         check(saved.item.publishedFolderUri == null) { "Book is already published" }
         TorrentDownloadService.start(context)
@@ -293,6 +293,16 @@ class TorrentDownloadManagerImpl @Inject constructor(
             return@operation
         }
         initializeLocked()
+        // External emulated storage can crash the Android 17 FUSE daemon during native I/O.
+        // Preserve legacy partial files; start a clean, verified transfer on internal storage.
+        val safeDirectory = stagingDirectory(infoHash)
+        if (File(saved.item.destinationPath).canonicalFile != safeDirectory.canonicalFile) {
+            val resume = File(stateDir, "$infoHash.resume")
+            if (resume.exists()) check(resume.renameTo(File(stateDir, "$infoHash.legacy-resume-${System.currentTimeMillis()}"))) { "Cannot preserve legacy resume state" }
+            saved = saved.copy(item = saved.item.copy(destinationPath = safeDirectory.path,
+                progress = 0f, bytesDownloaded = 0, downloadSpeedBytesPerSec = 0, uploadSpeedBytesPerSec = 0), files = null)
+            persist(saved)
+        }
         val handle = session?.find(Sha1Hash.parseHex(infoHash))
         if (handle?.isValid == true) {
             handle.unsetFlags(TorrentFlags.AUTO_MANAGED)
@@ -518,14 +528,14 @@ class TorrentDownloadManagerImpl @Inject constructor(
     }
 
     private fun stagingDirectory(hash: String): File {
-        val root = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: error("Download storage unavailable")
-        return checkedDestination(File(File(root, "torrents"), hash))
+        return checkedDestination(File(File(context.filesDir, "torrent-staging"), hash))
     }
 
     private fun cleanStaging(saved: SavedTorrent) {
-        val root = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.canonicalFile ?: return
         val directory = File(saved.item.destinationPath).canonicalFile
-        val owned = File(root, "torrents").canonicalFile
+        val owned = stagingRoots().firstOrNull { directory.toPath().startsWith(it.toPath()) }
+            ?: error("Invalid staging location")
+        val root = owned
         if (directory.parentFile == owned && directory.name == saved.item.infoHash && directory.toPath().startsWith(root.toPath())) {
             check(directory.deleteRecursively() || !directory.exists()) { "Cannot remove staging files" }
         } else {
@@ -543,10 +553,14 @@ class TorrentDownloadManagerImpl @Inject constructor(
         return TorrentFiles.selected(paths, selected)
     }
 
+    private fun stagingRoots(): List<File> = listOfNotNull(
+        File(context.filesDir, "torrent-staging").canonicalFile,
+        context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.let { File(it, "torrents").canonicalFile },
+    )
+
     private fun checkedDestination(directory: File): File {
-        val root = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.canonicalFile ?: error("Download storage unavailable")
         val target = directory.canonicalFile
-        require(target.toPath().startsWith(root.toPath())) { "Downloads must use app-specific storage" }
+        require(stagingRoots().any { target.toPath().startsWith(it.toPath()) }) { "Downloads must use app-specific storage" }
         check(target.isDirectory || target.mkdirs()) { "Cannot create download folder" }
         check(target.usableSpace >= 1024 * 1024) { "Insufficient storage space" }
         return target

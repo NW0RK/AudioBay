@@ -331,3 +331,13 @@ Verification: assembleDebug, testDebugUnitTest (73 tests), lintDebug and four pe
 - [x] Persist a bounded 80-event torrent timeline before/after native submission and first progress, priority and status operations; include memory page size.
 - [x] Capture bounded own-UID Android log summaries on restart and export, with a three-second timeout and strict message allowlist; explicitly disclose device-wide log restrictions.
 - [x] Verify 120 unit tests, four real-phone diagnostic tests, public release assembly, lint (zero errors), and 16 KB native-library alignment of the previously reported APK.
+
+## S25 Android 17 storage-daemon workaround - 2026-11-01
+
+- [x] Reproduce on SM-S931B: MediaProvider FUSE NodeTracker assertion occurs while opening external torrent staging; vold finds the app's open staging descriptor and explicitly sends Interrupt, explaining reason 2/status 2. Evidence retained privately in .tools/s25-live.log.
+- [x] Use private internal torrent staging for new and resumed native transfers; keep SAF publication and the selected shared root unchanged.
+- [x] Relocate legacy unverified queue entries on resume without copying through FUSE; preserve old partial files and archive old resume data, then restart with fresh verification.
+- [x] Verify 120 unit tests, release lint with zero errors, release assembly, and real S25 native transfer/restart/publication plus legacy-staging recovery tests. User confirmed the issue is fixed.
+- [x] Prepare official 0.1.6 with the existing certificate, public-build credential exclusion, APK alignment/signature checks and SHA-256 checksum.
+
+Device-test caution: Gradle connected-device test cleanup reinstalled the app on the personal S25 and cleared app data. Do not run connectedDebugAndroidTest on a personal device again; use an isolated test app/device or direct adb install -r and instrumentation without automatic uninstall cleanup. User explicitly declined restoring old downloads.

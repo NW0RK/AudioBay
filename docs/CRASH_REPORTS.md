@@ -23,3 +23,9 @@ The file includes up to 80 durable, timestamped torrent-stage events across proc
 Android does not grant ordinary third-party apps access to all device-wide system logs. The app performs a bounded own-UID logcat query with a three-second timeout; unavailability is stated in the export. A strict allowlist keeps signal identifiers, known Java stack frames and a security-denial indicator. Arbitrary log messages and raw logs are never included in exported files; the temporary private capture is deleted after processing. Delete saved reports also deletes the event journal and saved log summary. Active torrent checkpoints continue to track the engine until normal shutdown.
 
 Native ELF LOAD segments in the 0.1.4 APK were verified as 16 KB aligned, including libtorrent4j. Alignment alone therefore does not establish a cause for the S25 interruption.
+
+## 0.1.6 S25 investigation and workaround
+
+Reproduced on the user's S25 running Android 17: MediaProvider's libfuse_jni aborts in NodeTracker::CheckTracked during pf_open with `active_nodes_.find(node) != active_nodes_.end()`. Android vold subsequently finds AudioBay's open external staging descriptor and logs `Sending Interrupt to pid ...`; AudioBay records reason SIGNALED/status SIGINT. The initiating native crash is in the system MediaProvider process, not an AudioBay Java exception.
+
+Torrent I/O now uses filesDir/torrent-staging/<hash>, avoiding the external emulated-storage FUSE path. SAF remains the only publication route to the user-selected shared folder. Existing unverified external staging is preserved and its resume file archived in private state storage; resuming starts a fresh transfer in internal staging. This consumes internal storage and can restart partial progress. Legacy completed/shared files are not moved or deleted. Interrupted verified publication retains its original source for recovery.
