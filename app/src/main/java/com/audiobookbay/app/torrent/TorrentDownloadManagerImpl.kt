@@ -261,6 +261,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
             .or_(TorrentFlags.DEFAULT_DONT_DOWNLOAD).inv()).or_(TorrentFlags.UPLOAD_MODE)
         crashReports.checkpoint(CrashReports.Stage.ADD_TORRENT)
         SessionHandle(native.swig()).asyncAddTorrent(params)
+        crashReports.checkpoint(CrashReports.Stage.TORRENT_SUBMITTED)
     }
 
     override suspend fun updateMetadata(infoHash: String, metadata: DownloadMetadata): Result<Unit> = operation {
@@ -437,16 +438,22 @@ class TorrentDownloadManagerImpl @Inject constructor(
         val saved = records[hash] ?: return
         val handle = session?.find(Sha1Hash.parseHex(hash))?.takeIf { it.isValid } ?: return
         if (saved.item.status !in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING)) return
+        crashReports.checkpoint(CrashReports.Stage.PROGRESS_READ)
         val info = handle.torrentFile()
+        crashReports.checkpoint(CrashReports.Stage.METADATA_READY)
         if (info != null && hash !in prepared) {
             val selected = validate(info, File(saved.item.destinationPath), saved.selected)
+            crashReports.checkpoint(CrashReports.Stage.APPLY_PRIORITIES)
             handle.prioritizeFiles(Array(info.numFiles()) { if (it in selected) Priority.DEFAULT else Priority.IGNORE })
             handle.unsetFlags(TorrentFlags.UPLOAD_MODE)
+            crashReports.checkpoint(CrashReports.Stage.PRIORITIES_APPLIED)
             prepared.add(hash)
             persist(saved.copy(selected = selected.toList(), files = describe(info, selected)))
             return // Native priority changes are applied asynchronously.
         }
+        crashReports.checkpoint(CrashReports.Stage.STATUS_READ)
         val status = handle.status()
+        crashReports.checkpoint(CrashReports.Stage.STATUS_READY)
         check(!status.errorCode().isError) { status.errorCode().message }
         val completed = info != null && hash in prepared && status.totalWanted() > 0 && status.isFinished
         val item = saved.item.copy(

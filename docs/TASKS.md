@@ -324,3 +324,10 @@ Verification: assembleDebug, testDebugUnitTest (73 tests), lintDebug and four pe
 - [x] Save sanitized handled torrent errors; include other Android exit classifications and isolate history-read failures from local report display.
 - [x] Provide Create diagnostic report even when no crash record exists; explicitly distinguish interruptions and manual diagnostics from confirmed crashes.
 - [x] Verify 119 release unit tests, three phone tests (handler delegation, native interruption recovery and manual fallback when exit history fails), release lint with zero errors, assembly, signing/alignment and public APK credential exclusion.
+
+## No-PC torrent diagnostic export - 2026-11-01
+
+- [x] Add always-available Android document-picker export with success/error feedback and manual GitHub attachment instructions; no automatic transmission or debugging requirement.
+- [x] Persist a bounded 80-event torrent timeline before/after native submission and first progress, priority and status operations; include memory page size.
+- [x] Capture bounded own-UID Android log summaries on restart and export, with a three-second timeout and strict message allowlist; explicitly disclose device-wide log restrictions.
+- [x] Verify 120 unit tests, four real-phone diagnostic tests, public release assembly, lint (zero errors), and 16 KB native-library alignment of the previously reported APK.

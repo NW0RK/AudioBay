@@ -29,6 +29,29 @@ class CrashReportsTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test fun exportIncludesDurableStagesAndNoDownloadMetadata() = kotlinx.coroutines.runBlocking {
+        val target = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(target.cacheDir, "export-diagnostic-test-${System.nanoTime()}").apply { mkdirs() }
+        val context = object : ContextWrapper(target) {
+            override fun getNoBackupFilesDir(): File = root
+            override fun getSystemService(name: String): Any? = throw SecurityException("History unavailable")
+        }
+        try {
+            val reports = CrashReports(context, Dispatchers.IO)
+            repeat(90) { reports.checkpoint(CrashReports.Stage.TORRENT_SUBMITTED) }
+            val text = reports.exportText()
+            assertTrue(text.contains("DURABLE TORRENT EVENTS"))
+            assertTrue(text.contains("TORRENT_SUBMITTED"))
+            assertTrue(text.contains("Memory page size:"))
+            assertTrue(text.contains("Own-UID Android log summary") || text.contains("App log query"))
+            assertFalse(text.contains("History unavailable"))
+            val journal = File(root, "torrent-diagnostic-events").readLines()
+            assertEquals(80, journal.size)
+            reports.clear()
+            assertFalse(File(root, "torrent-diagnostic-events").exists())
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun manualDiagnosticRemainsAvailableWhenAndroidHistoryFails() = kotlinx.coroutines.runBlocking {
         val target = InstrumentationRegistry.getInstrumentation().targetContext
         val root = File(target.cacheDir, "manual-diagnostic-test-${System.nanoTime()}").apply { mkdirs() }

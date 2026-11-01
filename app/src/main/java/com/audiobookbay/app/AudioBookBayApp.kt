@@ -12,6 +12,7 @@ class AudioBookBayApp : Application() {
         super.onCreate()
         crashReports.installHandler()
         crashReports.recoverInterruptedSession()
+        crashReports.collectStartupLogs()
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }

@@ -20,6 +20,16 @@ class CrashTextTest {
         assertTrue(text.contains("libtorrent.so"))
         assertTrue(text.contains("000001"))
     }
+    @Test fun logSummaryOnlyIncludesAllowlistedDetails() {
+        val raw = "secret credential https://private/book\nFatal signal 2 (SIGINT), secret name\nat com.audiobookbay.app.Test.run(Test.kt:12)\navc: denied secret path"
+        val text = CrashText.logSummary(raw)
+        assertTrue(text.contains("Fatal signal 2 (SIGINT)"))
+        assertTrue(text.contains("Test.kt:12"))
+        assertFalse(text.contains("secret"))
+        assertFalse(text.contains("https"))
+        assertFalse(text.contains("private"))
+        assertEquals("", CrashText.logSummary("token=private book title"))
+    }
     @Test fun limitsLargeReports() {
         val error = RuntimeException("x".repeat(100000))
         assertTrue(CrashText.throwable(error).length <= 16000)

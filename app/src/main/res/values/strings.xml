@@ -177,6 +177,9 @@
     <string name="crashes_delete">Delete saved reports</string>
     <string name="crashes_refresh">Refresh reports</string>
     <string name="crashes_copied">Full reports copied. You can paste them into your GitHub issue.</string>
-    <string name="crashes_error">Could not read reports or open GitHub. Try again or copy your reports.</string>
+    <string name="crashes_error">Could not read, export or open reports. Try again or copy your reports.</string>
     <string name="crashes_create">Create diagnostic report</string>
+    <string name="crashes_export">Export diagnostic file</string>
+    <string name="crashes_export_description">No computer or debugging required. After the failure, reopen the app and export a diagnostic file, then attach it to your GitHub issue. Includes recent torrent events, device details, saved exit reports and permitted app log summaries. Android restricts full system logs. Raw log messages, book details and credentials are excluded.</string>
+    <string name="crashes_exported">Diagnostic file saved. Review it and attach it to your GitHub issue manually.</string>
 </resources>

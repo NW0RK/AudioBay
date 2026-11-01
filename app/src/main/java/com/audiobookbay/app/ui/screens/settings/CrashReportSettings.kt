@@ -1,5 +1,7 @@
 package com.audiobookbay.app.ui.screens.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -33,6 +35,19 @@ class CrashReportViewModel @Inject constructor(private val reports: CrashReports
     val saved = mutableReports.asStateFlow()
     private val mutableError = MutableStateFlow(false)
     val error = mutableError.asStateFlow()
+    private val mutableExporting = MutableStateFlow(false)
+    val exporting = mutableExporting.asStateFlow()
+    private val mutableExported = MutableStateFlow(false)
+    val exported = mutableExported.asStateFlow()
+    fun export(uri: Uri) { viewModelScope.launch {
+        mutableExporting.value = true
+        mutableExported.value = false
+        mutableError.value = false
+        try { reports.writeExport(uri); mutableExported.value = true }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { mutableError.value = true }
+        finally { mutableExporting.value = false }
+    } }
     init { refresh() }
     fun refresh(clear: Boolean = false, diagnostic: Boolean = false) { viewModelScope.launch {
         mutableError.value = false
@@ -50,6 +65,11 @@ fun CrashReportSettings() {
     val vm: CrashReportViewModel = hiltViewModel()
     val reports by vm.saved.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
+    val exporting by vm.exporting.collectAsStateWithLifecycle()
+    val exported by vm.exported.collectAsStateWithLifecycle()
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        if (uri != null) vm.export(uri)
+    }
     val context = LocalContext.current
     var openError by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
@@ -57,6 +77,13 @@ fun CrashReportSettings() {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.crashes_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.crashes_description), style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.crashes_export_description), style = MaterialTheme.typography.bodySmall)
+            Button(onClick = {
+                try { exporter.launch("AudioBay-diagnostics.txt"); openError = false }
+                catch (_: Exception) { openError = true }
+            }, enabled = !exporting) { Text(stringResource(R.string.crashes_export)) }
+            if (exporting) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (exported) Text(stringResource(R.string.crashes_exported))
             if (reports.isEmpty()) Text(stringResource(R.string.crashes_empty))
             OutlinedButton(onClick = { vm.refresh(diagnostic = true) }) { Text(stringResource(R.string.crashes_create)) }
             reports.forEachIndexed { index, report ->
