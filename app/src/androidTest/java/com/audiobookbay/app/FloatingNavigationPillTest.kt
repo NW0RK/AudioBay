@@ -2,6 +2,9 @@ package com.audiobookbay.app
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -33,28 +36,32 @@ class FloatingNavigationPillTest {
             val tab = compose.onAllNodes(isSelectable())[index]
             tab.assertHasClickAction().assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
             compose.onNodeWithContentDescription(labels[index]).assertExists()
+            compose.onNodeWithText(labels[index]).assertDoesNotExist()
             tab.performClick().assertIsSelected()
             compose.runOnIdle { assertEquals(item.route, selected.value) }
             compose.onAllNodes(isSelected()).assertCountEquals(1)
         }
     }
 
-    private fun verifyLayout(width: Int, dark: Boolean) {
+    private fun verifyLayout(width: Int, dark: Boolean, largeText: Boolean = false) {
         compose.setContent {
-            AudioBookBayTheme(darkTheme = dark) {
-                Box(Modifier.width(width.dp)) {
-                    FloatingNavigationPill(NavRoute.Home, {})
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, if (largeText) 2f else density.fontScale)) {
+                AudioBookBayTheme(darkTheme = dark, fontPercent = if (largeText) 150 else 100) {
+                    Box(Modifier.width(width.dp)) {
+                        FloatingNavigationPill(NavRoute.Home, {})
+                    }
                 }
             }
         }
         val bounds = compose.onAllNodes(isSelectable()).fetchSemanticsNodes().map { it.boundsInRoot }
         assertEquals(5, bounds.size)
         bounds.forEach { assertEquals(bounds.first().width, it.width, 1f) }
-        bounds.groupBy { it.top }.values.forEach { row ->
-            row.zipWithNext().forEach { (left, right) -> assertEquals(left.right, right.left, 1f) }
-        }
+        bounds.forEach { assertEquals(bounds.first().top, it.top, 1f); assertEquals(bounds.first().bottom, it.bottom, 1f) }
+        bounds.zipWithNext().forEach { (left, right) -> assertEquals(left.right, right.left, 1f) }
     }
 
     @Test fun narrowDarkLayoutHasEqualSpacing() = verifyLayout(288, true)
+    @Test fun maximumTextOnNarrowScreenKeepsFiveTabsInOneRow() = verifyLayout(288, true, true)
     @Test fun wideLightLayoutHasEqualSpacing() = verifyLayout(800, false)
 }

@@ -49,3 +49,10 @@
 - [x] Add persistent Dark/Light/System themes, labeled toggle targets, focus feedback and adaptive large-text navigation.
 - [x] Verify 136 unit tests, lint and public debug/release builds; inspect Galaxy A52 screenshots and pass 23 focused device checks.
 - [x] Prepare version 0.2.5 (code 16), preserve the upgrade certificate, exclude private build-time credentials and generate APK checksum.
+
+## Icon-only navigation and crash-report removal - 0.2.6
+
+- [x] Keep all five navigation tabs in one 56 dp row with no visible text; retain accessibility labels and selected state.
+- [x] Remove crash recording, startup diagnostics, torrent report hooks, Settings controls, export code and obsolete reporting tests.
+- [x] Pass 132 unit tests, debug lint, public debug/release builds and seven Galaxy A52 navigation checks, including maximum text size.
+- [x] Install and visually verify the signed release on the A52; preserve the upgrade certificate, exclude private credentials and create APK checksum.

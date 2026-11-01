@@ -10,7 +10,7 @@ Queue-action errors belong on individual items, with independent pending state. 
 
 Preserve the existing Search reset, full artwork, Saved and downloader-only scope. Home leads with available catalog content before empty recommendation setup; populated personal picks can lead. Use supporting colors for metadata and semantic colors with text for download status.
 
-Appearance offers Dark (existing default), Light and System. The Wi-Fi setting uses a single labeled toggle target. Custom controls expose focus feedback; section headings and download status changes have accessibility semantics. Bottom navigation uses five columns when labels fit, three or two columns as text grows, keeping every destination visible.
+Appearance offers Dark (existing default), Light and System. The Wi-Fi setting uses a single labeled toggle target. Custom controls expose focus feedback; section headings and download status changes have accessibility semantics. User revision: bottom navigation always shows five icons in a single 56 dp row. Visible labels are removed; localized accessibility labels and selected-tab feedback remain.
 
 ## Validation
 

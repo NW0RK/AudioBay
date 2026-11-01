@@ -77,7 +77,6 @@ fun SettingsScreen() {
             TextButton(shape = MaterialTheme.shapes.small, onClick = vm::clearRecommendationHistory) { Text(stringResource(R.string.discovery_clear)) }
             if (historyClearFailed) Text(stringResource(R.string.discovery_failed), color = MaterialTheme.colorScheme.error)
             AppUpdateSettings()
-            CrashReportSettings()
             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.large) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.about_downloads))
             Text(stringResource(R.string.external_player_hint))

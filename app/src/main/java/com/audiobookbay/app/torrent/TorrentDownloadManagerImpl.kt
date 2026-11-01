@@ -4,7 +4,6 @@ import com.audiobookbay.app.data.storage.BookPublisher
 import com.audiobookbay.app.data.storage.BookFolders
 import com.audiobookbay.app.data.storage.DownloadNetworkSettings
 import com.audiobookbay.app.data.storage.PublicationFile
-import com.audiobookbay.app.diagnostics.CrashReports
 import android.content.Context
 import android.os.Build
 import android.os.Environment
@@ -52,7 +51,6 @@ class TorrentDownloadManagerImpl @Inject constructor(
     private val publisher: BookPublisher,
     private val networkSettings: DownloadNetworkSettings,
     private val networkStatus: NetworkStatus,
-    private val crashReports: CrashReports,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : TorrentDownloadManager {
     private val scope = CoroutineScope(SupervisorJob() + io)
@@ -126,7 +124,6 @@ class TorrentDownloadManagerImpl @Inject constructor(
         wifiOnly = networkSettings.wifiOnly.first()
         if (session != null) return
         check(Build.VERSION.SDK_INT >= 28) { "Torrent downloads require Android 9 or newer" }
-        crashReports.checkpoint(CrashReports.Stage.ENGINE_START)
         val native = SessionManager()
         native.addListener(listener)
         try {
@@ -136,7 +133,6 @@ class TorrentDownloadManagerImpl @Inject constructor(
                 activeDownloads(2)
                 activeLimit(2)
             }))
-            crashReports.checkpoint(CrashReports.Stage.ENGINE_RUNNING)
             session = native
             poller = scope.launch {
                 var tick = 0
@@ -156,9 +152,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
                 }
             }
         } catch (e: Throwable) {
-            crashReports.checkpoint(CrashReports.Stage.ENGINE_STOP)
             native.stop()
-            crashReports.engineStopped()
             session = null
             throw e
         }
@@ -193,9 +187,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
             poller?.cancel()
             poller = null
             native.removeListener(listener)
-            crashReports.checkpoint(CrashReports.Stage.ENGINE_STOP)
             native.stop()
-            crashReports.engineStopped()
             pendingSaves.values.forEach { it.complete(Unit) }
             pendingSaves.clear()
             session = null
@@ -259,9 +251,7 @@ class TorrentDownloadManagerImpl @Inject constructor(
         // during metadata exchange can make peers mistake this client for a seed.
         params.flags = params.flags.and_(TorrentFlags.PAUSED.or_(TorrentFlags.AUTO_MANAGED)
             .or_(TorrentFlags.DEFAULT_DONT_DOWNLOAD).inv()).or_(TorrentFlags.UPLOAD_MODE)
-        crashReports.checkpoint(CrashReports.Stage.ADD_TORRENT)
         SessionHandle(native.swig()).asyncAddTorrent(params)
-        crashReports.checkpoint(CrashReports.Stage.TORRENT_SUBMITTED)
     }
 
     override suspend fun updateMetadata(infoHash: String, metadata: DownloadMetadata): Result<Unit> = operation {
@@ -448,22 +438,16 @@ class TorrentDownloadManagerImpl @Inject constructor(
         val saved = records[hash] ?: return
         val handle = session?.find(Sha1Hash.parseHex(hash))?.takeIf { it.isValid } ?: return
         if (saved.item.status !in setOf(DownloadStatus.QUEUED, DownloadStatus.CHECKING, DownloadStatus.DOWNLOADING)) return
-        crashReports.checkpoint(CrashReports.Stage.PROGRESS_READ)
         val info = handle.torrentFile()
-        crashReports.checkpoint(CrashReports.Stage.METADATA_READY)
         if (info != null && hash !in prepared) {
             val selected = validate(info, File(saved.item.destinationPath), saved.selected)
-            crashReports.checkpoint(CrashReports.Stage.APPLY_PRIORITIES)
             handle.prioritizeFiles(Array(info.numFiles()) { if (it in selected) Priority.DEFAULT else Priority.IGNORE })
             handle.unsetFlags(TorrentFlags.UPLOAD_MODE)
-            crashReports.checkpoint(CrashReports.Stage.PRIORITIES_APPLIED)
             prepared.add(hash)
             persist(saved.copy(selected = selected.toList(), files = describe(info, selected)))
             return // Native priority changes are applied asynchronously.
         }
-        crashReports.checkpoint(CrashReports.Stage.STATUS_READ)
         val status = handle.status()
-        crashReports.checkpoint(CrashReports.Stage.STATUS_READY)
         check(!status.errorCode().isError) { status.errorCode().message }
         val completed = info != null && hash in prepared && status.totalWanted() > 0 && status.isFinished
         val item = saved.item.copy(
@@ -593,7 +577,6 @@ class TorrentDownloadManagerImpl @Inject constructor(
             runCatching { persist(saved.copy(item = saved.item.copy(status = DownloadStatus.ERROR, errorMessage = error.message, downloadSpeedBytesPerSec = 0))) }
                 .onFailure { Timber.e(it, "Cannot persist torrent error; retaining runtime error") }
         }
-        crashReports.recordFailure(error)
         Timber.e(error, "Torrent operation failed")
     }
 
@@ -615,11 +598,10 @@ class TorrentDownloadManagerImpl @Inject constructor(
     private suspend fun <T> operation(block: suspend () -> T): Result<T> = withContext(io) {
         try { Result.success(lock.withLock { block() }) }
         catch (e: CancellationException) { throw e }
-        catch (e: Exception) { crashReports.recordFailure(e); Timber.e(e, "Torrent operation failed"); Result.failure(e) }
+        catch (e: Exception) { Timber.e(e, "Torrent operation failed"); Result.failure(e) }
         // libtorrent4j wraps loadLibrary failures in LinkageError. A later attempt
         // can instead throw NoClassDefFoundError after failed class initialization.
         catch (e: LinkageError) {
-            crashReports.recordFailure(e)
             Timber.e(e, "Cannot load torrent engine")
             Result.failure(IllegalStateException("Torrent engine is unavailable on this device", e))
         }

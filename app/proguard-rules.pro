@@ -41,6 +41,3 @@
 
 # Jsoup
 -keep class org.jsoup.** { *; }
-
-# Retain source locations for manually shared crash reports; archive mapping per release.
--keepattributes SourceFile,LineNumberTable

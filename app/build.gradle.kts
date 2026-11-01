@@ -28,8 +28,8 @@ android {
         applicationId = "com.audiobookbay.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 16
-        versionName = "0.2.5"
+        versionCode = 17
+        versionName = "0.2.6"
         buildConfigField("String", "GEMINI_API_KEY", "\"${geminiKey.get().replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
