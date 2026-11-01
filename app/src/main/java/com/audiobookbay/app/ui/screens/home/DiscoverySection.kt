@@ -18,6 +18,7 @@ import androidx.compose.animation.core.tween
 
 @Composable
 internal fun DiscoverySection(picks: List<DiscoveryPick>, hasHistory: Boolean, available: Boolean, busy: Boolean, failed: String?, generate: () -> Unit, settings: () -> Unit, detail: (String) -> Unit) {
+    val shelfWidth = ((androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp - 32.dp) * 0.72f).coerceIn(220.dp, 360.dp)
     Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.featured_shelf), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(if (hasHistory) R.string.discovery_context else R.string.discovery_first), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -35,9 +36,9 @@ internal fun DiscoverySection(picks: List<DiscoveryPick>, hasHistory: Boolean, a
         }) { shown ->
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         shown.firstOrNull()?.let { lead ->
-            Row(Modifier.fillMaxWidth().clickable { detail(lead.book.id) }, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                AsyncImage(model = lead.book.coverImageUrl, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.width(112.dp).height(140.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.fillMaxWidth().clickable { detail(lead.book.id) }, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AsyncImage(model = lead.book.coverImageUrl, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(lead.book.title, style = MaterialTheme.typography.titleLarge)
                     Text(lead.book.author, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(lead.reason, style = MaterialTheme.typography.bodyMedium)
@@ -46,7 +47,7 @@ internal fun DiscoverySection(picks: List<DiscoveryPick>, hasHistory: Boolean, a
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             items(shown.drop(1), key = { it.book.source.toString() + it.book.id }) { pick ->
-                Column(Modifier.width(160.dp).clickable { detail(pick.book.id) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.width(shelfWidth).clickable { detail(pick.book.id) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     AsyncImage(model = pick.book.coverImageUrl, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
                     Text(pick.book.title, style = MaterialTheme.typography.titleMedium, maxLines = 3)
                     Text(pick.book.author, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

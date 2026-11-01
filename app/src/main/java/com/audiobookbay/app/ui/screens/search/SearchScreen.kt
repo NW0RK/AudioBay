@@ -25,9 +25,11 @@ import com.audiobookbay.app.domain.model.UiState
 import com.audiobookbay.app.ui.components.*
 
 @Composable
-fun SearchScreen(onNavigateToDetail: (String) -> Unit, resetToken: Int = 0, onBrowse: () -> Unit = {}, onDownload: (String?) -> Unit = {}) {
+fun SearchScreen(onNavigateToDetail: (String) -> Unit, resetToken: Int = 0, onDownload: (String?) -> Unit = {}) {
     val actions = rememberCatalogActions()
     val vm: SearchViewModel = hiltViewModel()
+    val formatting by vm.formatting.collectAsStateWithLifecycle()
+    val formattingFailed by vm.formattingFailed.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
     val state by vm.uiState.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
@@ -53,7 +55,6 @@ fun SearchScreen(onNavigateToDetail: (String) -> Unit, resetToken: Int = 0, onBr
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         CatalogSaveError(actions)
         Text(stringResource(R.string.nav_search), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.padding(vertical = 16.dp))
-        Text(stringResource(R.string.search_description), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 16.dp))
         OutlinedTextField(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { vm.submit(); keyboard?.hide() }),
@@ -70,10 +71,12 @@ fun SearchScreen(onNavigateToDetail: (String) -> Unit, resetToken: Int = 0, onBr
                 items(history) { item -> SuggestionChip(onClick = { vm.setQuery(item) }, label = { Text(item) }) }
             }
         }
+        if (formatting) Text(stringResource(R.string.ai_search_format_progress), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (formattingFailed) Text(stringResource(R.string.ai_search_format_failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         StateContent(state, Modifier.weight(1f)) { result ->
         Column(Modifier.fillMaxSize()) {
         when (result) {
-            UiState.Idle -> MessageState(stringResource(R.string.search_prompt), stringResource(R.string.search_description), stringResource(R.string.browse_audiobooks), onBrowse, scrollable = true)
+            UiState.Idle -> Unit
             UiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             is UiState.Error -> MessageState(stringResource(R.string.discovery_error), stringResource(R.string.catalog_error_hint), stringResource(R.string.retry), vm::retry, error = true, scrollable = true)
             is UiState.Success -> {

@@ -72,7 +72,6 @@ fun AudioBookBayNavHost() {
             composable<NavRoute.Search> {
                 SearchScreen(
                     resetToken = searchResetToken,
-                    onBrowse = { navController.navigateToTab(NavRoute.Home) },
                     onDownload = { navController.navigate(NavRoute.Downloads(it)) },
                     onNavigateToDetail = { id ->
                         navController.navigate(NavRoute.AudiobookDetail(id))

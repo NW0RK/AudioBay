@@ -18,6 +18,12 @@ class AppearanceSettingsTest {
         try {
             val store = PreferenceDataStoreFactory.create(scope = scope) { File(temporaryFolder.root, "appearance.preferences_pb") }
             val settings = AppearanceSettings(store, Dispatchers.IO)
+            val search = com.audiobookbay.app.data.storage.SearchFormattingSettings(store, Dispatchers.IO)
+            assertFalse(search.enabled.first())
+            search.setEnabled(true)
+            assertTrue(com.audiobookbay.app.data.storage.SearchFormattingSettings(store, Dispatchers.IO).enabled.first())
+            search.setEnabled(false)
+            assertFalse(search.enabled.first())
             assertEquals(100, settings.fontPercent.first())
             assertEquals("dark", settings.theme.first())
             settings.setTheme("system")

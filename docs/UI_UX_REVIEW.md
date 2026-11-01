@@ -19,3 +19,7 @@ Appearance offers Dark (existing default), Light and System. The Wi-Fi setting u
 Galaxy A52 SM-A525F, 1080 x 2400, system font scale 1.5. Deterministic screenshots additionally cover 2x system font scale, 150% app font size, light/dark details, Unicode catalog text and empty states. Device checks cover setup validation, busy states, file import, persistent detail actions, appearance, navigation and saved-card presentation.
 
 This is an implementation and device visual review, not a user study. TalkBack speech and external keyboard traversal still benefit from hands-on assistive-technology testing.
+
+## User revisions in 0.2.7
+
+Larger Home and personal-pick cover cards; larger artwork in list rows; one column in category results and Saved grid view. Search retains its original adaptive 150 dp grid sizing. Its idle recommendation and Browse action are removed, as is the redundant description above the input. Settings offers default-off AI name formatting, which preserves original result identities and never blocks the initial search response. Provider failures retain originals.

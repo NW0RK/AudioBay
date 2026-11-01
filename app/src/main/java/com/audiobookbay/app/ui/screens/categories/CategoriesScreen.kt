@@ -28,7 +28,7 @@ fun CategoriesScreen(onNavigateToDetail: (String) -> Unit, onDownload: (String?)
         CatalogSaveError(actions)
         TopAppBar(title = { Text(state.categories.firstOrNull { it.slug == state.slug }?.displayName ?: stringResource(R.string.categories_title)) },
             navigationIcon = { IconButton(shape = MaterialTheme.shapes.small, onClick = { if (state.slug != null) vm.select(null) else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } })
-        LazyVerticalGrid(columns = GridCells.Adaptive(156.dp), state = grid, contentPadding = PaddingValues(16.dp),
+        LazyVerticalGrid(columns = if (state.slug == null) GridCells.Adaptive(156.dp) else GridCells.Fixed(1), state = grid, contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (state.slug == null) {
                 items(state.categories, key = { it.slug }) { category ->

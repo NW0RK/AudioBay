@@ -86,7 +86,7 @@ class LiteraryCatalogUiTest {
     @Test fun homeMetadataPlacesSizeBelowLanguageAndFormat() {
         compose.setContent { AudioBookBayTheme {
             AudiobookCard(Audiobook("id", "Example", "Author", language = "English", audioFormat = "M4B", formattedSize = "150 MB"),
-                Modifier.width(156.dp), homeMetadata = true, onClick = {})
+                Modifier.width(260.dp), homeMetadata = true, onClick = {})
         } }
         val language = compose.onNodeWithText("English", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val format = compose.onNodeWithText("M4B", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot

@@ -110,9 +110,12 @@ fun AudiobookCard(
     Box(modifier.graphicsLayer { scaleX = scale; scaleY = scale; this.alpha = alpha }
         .clickable(interactionSource = interaction, indication = QuietIndication, onClick = onClick)) {
         if (compact) {
-            Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BookCover(book, Modifier.width(88.dp).height(128.dp))
-                BookCardText(book, state, onSave, onDownload, Modifier.weight(1f), true, homeMetadata)
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
+                val coverWidth = (maxWidth * 0.4f).coerceAtMost(180.dp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    BookCover(book, Modifier.width(coverWidth).aspectRatio(1f))
+                    BookCardText(book, state, onSave, onDownload, Modifier.weight(1f), true, homeMetadata)
+                }
             }
         } else {
             Column {

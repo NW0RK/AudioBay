@@ -50,3 +50,17 @@ configuration. Quota failures leave existing names intact; retry is explicit.
 Requests time out after 15 seconds, and no alternate model is selected on failure.
 Free-tier inputs may be used by Google to improve its products; see Google's pricing
 and terms for current details.
+
+## Optional AI formatting in Search (0.2.7)
+
+Settings > Auto-format search results with AI is off by default and uses the configured
+Gemini key. It sends only result titles, author names and local batch indices to Google.
+Search results appear before formatting; batches contain up to 20 books. Responses are
+validated by index and preserve catalog IDs, artwork and source links. Unlike download
+folder cleanup, search formatting preserves meaningful subtitles and series details.
+Uncertain fields and failed requests retain original names. Disabling the setting or
+removing the key cancels pending work and restores originals. Query changes cancel stale
+formatting. A bounded in-memory cache avoids repeating successful corrections during
+pagination; no catalog database records are rewritten.
+
+Search cover sizes remain unchanged. The empty-search browsing prompt is removed.

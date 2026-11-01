@@ -89,7 +89,7 @@ fun SavedContent(state: UiState<List<Audiobook>>, onRetry: () -> Unit, onBrowse:
                     MessageState(stringResource(R.string.saved_empty), stringResource(R.string.saved_empty_hint), stringResource(R.string.browse_audiobooks), onBrowse, scrollable = true)
                 } else {
                     val books = remember(result.data, sort) { sortSavedBooks(result.data, sort) }
-                    LazyVerticalGrid(columns = if (grid) GridCells.Adaptive(156.dp) else GridCells.Fixed(1),
+                    LazyVerticalGrid(columns = GridCells.Fixed(1),
                         contentPadding = PaddingValues(bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         items(books, key = { it.source.toString() + ":" + it.id }) { book ->
                             val card = actions?.state(book) ?: BookCardState()

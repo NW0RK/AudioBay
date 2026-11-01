@@ -62,6 +62,7 @@ fun HomeScreen(
     discoveryHeader: @Composable () -> Unit = {},
     discoveryLeads: Boolean = true,
 ) {
+    val shelfWidth = ((androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp - 32.dp) * 0.72f).coerceIn(220.dp, 360.dp)
     val content = (state as? UiState.Success)?.data
     val grid = rememberLazyGridState()
     var handledReset by rememberSaveable { mutableIntStateOf(0) }
@@ -98,7 +99,7 @@ fun HomeScreen(
                                     SectionHeading(stringResource(R.string.recently_added))
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                         items(state.data.books.take(12), key = { "${it.source}:${it.id}" }) { book ->
-                                            HomeCard(book, actions, onDownload, onNavigateToDetail, Modifier.width(156.dp), compact = false)
+                                            HomeCard(book, actions, onDownload, onNavigateToDetail, Modifier.width(shelfWidth), compact = false)
                                         }
                                     }
                                 }

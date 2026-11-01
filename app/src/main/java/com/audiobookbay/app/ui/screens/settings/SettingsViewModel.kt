@@ -16,6 +16,7 @@ class SettingsViewModel @Inject constructor(
     private val manager: TorrentDownloadManager,
     network: DownloadNetworkSettings,
     private val keys: com.audiobookbay.app.data.storage.ApiKeySettings,
+    private val searchFormatting: com.audiobookbay.app.data.storage.SearchFormattingSettings,
     private val discovery: com.audiobookbay.app.domain.repository.RecommendationRepository? = null,
 ) : ViewModel() {
     private val _historyClearFailed = MutableStateFlow(false)
@@ -24,6 +25,14 @@ class SettingsViewModel @Inject constructor(
         try { discovery?.clear(); _historyClearFailed.value = false }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { _historyClearFailed.value = true }
+    } }
+    val formatSearchResults = searchFormatting.enabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    private val _formatSearchSaveFailed = MutableStateFlow(false)
+    val formatSearchSaveFailed = _formatSearchSaveFailed.asStateFlow()
+    fun setFormatSearchResults(enabled: Boolean) { viewModelScope.launch {
+        try { searchFormatting.setEnabled(enabled); _formatSearchSaveFailed.value = false }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { _formatSearchSaveFailed.value = true }
     } }
     val keyConfigured = keys.configured
     private val _keyBusy = MutableStateFlow(false)

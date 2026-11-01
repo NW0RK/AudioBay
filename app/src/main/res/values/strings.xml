@@ -14,7 +14,6 @@
     <string name="load_more">Load more</string>
     <string name="source_librivox">LibriVox</string>
     <string name="search_hint">Search audiobook titles</string>
-    <string name="search_prompt">Search for your next audiobook</string>
     <string name="search_empty">No matching audiobooks found.</string>
     <string name="clear_history">Clear search history</string>
     <string name="detail_title">Audiobook details</string>
@@ -94,7 +93,6 @@
     <string name="download_setup_subtitle">Add a magnet link or torrent file</string>
     <string name="featured_shelf">Discover something new</string>
     <string name="catalog_shelf">Explore the catalog</string>
-    <string name="search_description">Find your next download by title, author, or series.</string>
     <string name="search_results_count">%1$d books found so far</string>
     <string name="comments_title">Comments (%1$d)</string>
     <string name="refresh_comments">Refresh comments</string>
@@ -219,4 +217,9 @@
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
     <string name="theme_system">System</string>
+    <string name="ai_search_format_title">Auto-format search results with AI</string>
+    <string name="ai_search_format_description">Use your configured Gemini API key to tidy book titles and author names. Search-result names are sent to Google; API usage may incur charges. Results appear immediately and keep their original names if formatting fails. Turning this off restores the original names.</string>
+    <string name="ai_search_format_save_error">Could not save this setting. Try again.</string>
+    <string name="ai_search_format_progress">Formatting book names…</string>
+    <string name="ai_search_format_failed">Some names could not be formatted. Original names are kept.</string>
 </resources>

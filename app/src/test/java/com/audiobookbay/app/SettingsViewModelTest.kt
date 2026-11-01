@@ -30,8 +30,11 @@ class SettingsViewModelTest {
     private val network = mockk<DownloadNetworkSettings>()
     private val keys = mockk<com.audiobookbay.app.data.storage.ApiKeySettings>()
 
+    private val formatting = mockk<com.audiobookbay.app.data.storage.SearchFormattingSettings>()
+
     @Before fun setUp() {
         Dispatchers.setMain(dispatcher)
+        every { formatting.enabled } returns flowOf(false)
         every { folders.folder } returns flowOf(null)
         every { network.wifiOnly } returns flowOf(false)
         every { keys.configured } returns kotlinx.coroutines.flow.MutableStateFlow(false)
@@ -39,7 +42,7 @@ class SettingsViewModelTest {
 
     @After fun tearDown() { Dispatchers.resetMain() }
 
-    private fun vm() = SettingsViewModel(folders, manager, network, keys)
+    private fun vm() = SettingsViewModel(folders, manager, network, keys, formatting)
 
     @Test fun saveAndRemoveKeyWithoutExposingTheCredential() = runTest(dispatcher) {
         coEvery { keys.save(any()) } returns Unit
@@ -98,5 +101,14 @@ class SettingsViewModelTest {
         vm.setWifiOnly(true)
         runCurrent()
         assertTrue(vm.networkError.value)
+    }
+    @Test fun formattingSettingFailureCanBeRetried() = runTest(dispatcher) {
+        coEvery { formatting.setEnabled(true) } throws java.io.IOException("storage")
+        val vm = vm(); vm.setFormatSearchResults(true); runCurrent()
+        assertTrue(vm.formatSearchSaveFailed.value)
+        coEvery { formatting.setEnabled(false) } returns Unit
+        vm.setFormatSearchResults(false); runCurrent()
+        coVerify { formatting.setEnabled(false) }
+        assertFalse(vm.formatSearchSaveFailed.value)
     }
 }

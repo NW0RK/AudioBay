@@ -31,6 +31,8 @@ fun SettingsScreen() {
     val error by vm.error.collectAsStateWithLifecycle()
     val wifiOnly by vm.wifiOnly.collectAsStateWithLifecycle()
     val networkError by vm.networkError.collectAsStateWithLifecycle()
+    val formatSearch by vm.formatSearchResults.collectAsStateWithLifecycle()
+    val formatSearchSaveFailed by vm.formatSearchSaveFailed.collectAsStateWithLifecycle()
     val keyConfigured by vm.keyConfigured.collectAsStateWithLifecycle()
     val keyBusy by vm.keyBusy.collectAsStateWithLifecycle()
     val keyError by vm.keyError.collectAsStateWithLifecycle()
@@ -74,6 +76,7 @@ fun SettingsScreen() {
                 if (keyError) keyFailure ?: com.audiobookbay.app.data.storage.ApiKeyFailure.STORAGE else null,
                 onChange = { apiKey = it }, onSave = { vm.saveApiKey(apiKey) },
                 onRemove = { vm.saveApiKey("") })
+            SearchFormattingSettingsCard(formatSearch, formatSearchSaveFailed, vm::setFormatSearchResults)
             TextButton(shape = MaterialTheme.shapes.small, onClick = vm::clearRecommendationHistory) { Text(stringResource(R.string.discovery_clear)) }
             if (historyClearFailed) Text(stringResource(R.string.discovery_failed), color = MaterialTheme.colorScheme.error)
             AppUpdateSettings()

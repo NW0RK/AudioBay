@@ -56,3 +56,11 @@
 - [x] Remove crash recording, startup diagnostics, torrent report hooks, Settings controls, export code and obsolete reporting tests.
 - [x] Pass 132 unit tests, debug lint, public debug/release builds and seven Galaxy A52 navigation checks, including maximum text size.
 - [x] Install and visually verify the signed release on the A52; preserve the upgrade certificate, exclude private credentials and create APK checksum.
+
+## Larger covers and optional AI Search formatting - 0.2.7
+
+- [x] Enlarge Home/personal-pick shelves and list artwork; use one column for category results and Saved grid view.
+- [x] Preserve Search cover sizing and remove the empty-search prompt, descriptive filler and Browse button.
+- [x] Add default-off, persisted AI Search formatting with background batches, identity-safe parsing, bounded cache, cancellation and original-name fallback.
+- [x] Cover preference persistence, missing keys, failures, stale queries, pagination and malformed AI output; pass 142 unit tests, lint, public builds and 15 A52 UI checks.
+- [x] Install and visually inspect the signed release on the Galaxy A52; verify public credentials exclusion, upgrade certificate and APK checksum.
