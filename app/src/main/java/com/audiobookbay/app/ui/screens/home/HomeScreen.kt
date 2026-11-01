@@ -1,17 +1,36 @@
 package com.audiobookbay.app.ui.screens.home
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.audiobookbay.app.R
@@ -69,9 +88,9 @@ fun HomeScreen(
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     SectionHeading(stringResource(R.string.featured_shelf))
-                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        items(state.data.books.take(8), key = { "${it.source}:${it.id}" }) { book ->
-                                            HomeCard(book, actions, onDownload, onNavigateToDetail, Modifier.width(176.dp))
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                                        items(state.data.books.take(6), key = { "${it.source}:${it.id}" }) { book ->
+                                            FeaturedHero(book, actions, onDownload, onNavigateToDetail, Modifier.width(300.dp))
                                         }
                                     }
                                 }
@@ -120,4 +139,77 @@ private fun HomeCard(book: Audiobook, actions: CatalogActions?, onDownload: (Str
     val state = actions?.state(book) ?: BookCardState()
     AudiobookCard(book, modifier, compact, state, onSave = { actions?.toggle(book) },
         onDownload = { onDownload(if (state.download == null) book.id else null) }, onClick = { onDetail(book.id) })
+}
+
+@Composable
+private fun FeaturedHero(book: Audiobook, actions: CatalogActions?, onDownload: (String?) -> Unit, onDetail: (String) -> Unit, modifier: Modifier) {
+    val state = actions?.state(book) ?: BookCardState()
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, tween(160), label = "Hero press")
+    Box(modifier
+        .aspectRatio(0.82f)
+        .graphicsLayer { scaleX = scale; scaleY = scale }
+        .clip(RoundedCornerShape(20.dp))
+        .clickable(interactionSource = interaction, indication = null, onClick = { onDetail(book.id) })) {
+        AsyncImage(
+            model = book.coverImageUrl,
+            contentDescription = null,
+            placeholder = painterResource(R.drawable.cover_placeholder),
+            error = painterResource(R.drawable.cover_placeholder),
+            fallback = painterResource(R.drawable.cover_placeholder),
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0.45f to MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+                        1f to MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                    ),
+                ),
+        )
+        Row(
+            Modifier.align(Alignment.TopEnd).padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            IconButton(onClick = { actions?.toggle(book) }, enabled = state.saveEnabled, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    if (state.saved) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
+                    stringResource(if (state.saved) R.string.unsave_book else R.string.save_book, book.title),
+                    Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            IconButton(onClick = { onDownload(if (state.download == null) book.id else null) }, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Outlined.FileDownload,
+                    stringResource(if (state.download != null) R.string.view_book_download else R.string.prepare_book_download, book.title),
+                    Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+        Column(
+            Modifier.align(Alignment.BottomStart).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                book.title,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                book.author,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
