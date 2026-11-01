@@ -4,6 +4,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import com.audiobookbay.app.data.remote.AudiobookRemoteDataSource
 import com.audiobookbay.app.domain.model.Audiobook
 import com.audiobookbay.app.domain.model.Resource
@@ -19,7 +22,11 @@ class AudiobookSearchRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) : AudiobookSearchRepository {
 
-    private val searchHistoryKey = stringSetPreferencesKey("search_history_queries")
+    private val legacySearchHistoryKey = stringSetPreferencesKey("search_history_queries")
+    private val searchHistoryKey = stringPreferencesKey("search_history_ordered")
+    private fun readHistory(preferences: Preferences): List<String> =
+        preferences[searchHistoryKey]?.let { runCatching { Json.decodeFromString<List<String>>(it) }.getOrNull() }
+            ?: preferences[legacySearchHistoryKey]?.toList().orEmpty()
 
     override suspend fun searchAudiobooks(query: String, page: Int): Resource<List<Audiobook>> {
         if (query.isNotBlank()) {
@@ -30,7 +37,7 @@ class AudiobookSearchRepositoryImpl @Inject constructor(
 
     override fun getSearchHistory(): Flow<List<String>> {
         return dataStore.data.map { preferences ->
-            preferences[searchHistoryKey]?.toList() ?: emptyList()
+            readHistory(preferences)
         }
     }
 
@@ -38,15 +45,16 @@ class AudiobookSearchRepositoryImpl @Inject constructor(
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return
         dataStore.edit { preferences ->
-            val current = preferences[searchHistoryKey]?.toMutableSet() ?: mutableSetOf()
-            current.add(trimmed)
-            preferences[searchHistoryKey] = current
+            val current = readHistory(preferences).filterNot { it.equals(trimmed, ignoreCase = true) }
+            preferences[searchHistoryKey] = Json.encodeToString((listOf(trimmed) + current).take(20))
+            preferences.remove(legacySearchHistoryKey)
         }
     }
 
     override suspend fun clearSearchHistory() {
         dataStore.edit { preferences ->
             preferences.remove(searchHistoryKey)
+            preferences.remove(legacySearchHistoryKey)
         }
     }
 }

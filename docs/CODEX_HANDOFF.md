@@ -1,122 +1,98 @@
-# Codex Continuation & Handoff Guide
+# Codex continuation — AudioBookBay Android
 
-> **To OpenAI Codex:** Welcome! Google Antigravity has completed the comprehensive research, architecture design, dependency configuration, directory scaffolding, domain modeling, and initial implementation. This document tells you **exactly what is ready, where to start, and what to build next**.
+Updated 2026-11-01. Preserve the current project; do not restart scaffolding.
 
----
+## Current state
 
-## 1. What Has Already Been Implemented
+The original Antigravity handoff overstated build readiness. This session fixed a
+missing Gradle wrapper JAR (official checksum verified), an invalid settings DSL
+block, missing launcher icons, an unqualified Hilt dispatcher, and two Media3
+unstable-API lint errors. No dependency versions were upgraded unnecessarily.
 
-1. **Gradle Build Toolchain & Dependencies:**
-   - Kotlin `2.1.0` with built-in Compose compiler plugin.
-   - Android Gradle Plugin `8.8.2` targeting Android API 35 (`minSdk = 26`).
-   - Centralized Version Catalog in [`gradle/libs.versions.toml`](file:///c:/Users/niko0/Documents/GitHub/AudioBookBayAndroid/gradle/libs.versions.toml).
-   - Gradle wrapper scripts (`gradlew`, `gradlew.bat`, `gradle-wrapper.properties` configured for Gradle `8.11.1`).
-   - Proguard rules for `libtorrent4j`, Retrofit, OkHttp, Room, and Kotlin Serialization in [`app/proguard-rules.pro`](file:///c:/Users/niko0/Documents/GitHub/AudioBookBayAndroid/app/proguard-rules.pro).
+Implemented and verified before torrent work:
+- Home discovery: real covers/cards, pull-to-refresh, pagination, loading/empty/error
+  states, deduplication, cancellation, and retry without discarding existing cards.
+- Search: 300 ms debounce, cancelled stale queries, ordered DataStore history capped
+  at 20, results grid and paging controls. The website sometimes ignores queries;
+  unrelated listings are rejected so LibriVox can supply real matches.
+- Details: type-safe route decoding, real covers, author/narrator/format/bitrate,
+  expandable synopsis, chapter metadata, and raw available torrent information.
+- LibriVox: documented coverart/id parameters, namespaced IDs, variable url_other
+  JSON shape, transport-error fallback, source-consistent paging. Ascending API
+  ordering avoids the unfinished recordings seen with newest IDs.
+- Room v2 catalog_cache keeps remote snapshots separate from owned library records.
+  Explicit migration 1 to 2 replaces destructive migration. Offline paging uses
+  cached pages consistently. Full details survive database reopening offline.
+- Parser: verified /abss/<slug>/ detail URL, inline metadata boundaries, relative
+  links and plain category text; challenge pages cannot become fake details.
 
-2. **Application Architecture & Contracts:**
-   - Strict Clean Architecture with pure domain layer in [`app/src/main/java/com/audiobookbay/app/domain/`](file:///c:/Users/niko0/Documents/GitHub/AudioBookBayAndroid/app/src/main/java/com/audiobookbay/app/domain/).
-   - 6 Core Domain Contracts defined:
-     - `AudiobookRepository`
-     - `AudiobookSearchRepository`
-     - `TorrentDownloadManager`
-     - `AudiobookPlayer`
-     - `LibraryRepository`
-     - `PlaybackProgressRepository`
-   - Complete domain models: `Audiobook`, `AudiobookDetail`, `Chapter`, `TorrentInfo`, `DownloadItem`, `PlaybackState`, `Bookmark`, `Category`, `Resource`, `UiState`.
+The native-engine milestone is implemented in TorrentDownloadManagerImpl. It uses the
+actual libtorrent4j 2.1.0-39 API, atomic request/resume files, Room download records,
+selected audio priorities, scoped storage checks, polling, native alerts, pause,
+resume, and restart restoration. TorrentFilesTest covers selection/path safety.
+TorrentTransferTest generates its own lawful WAV/torrent and uses two local native
+sessions on the phone to exercise metadata, transfer, pause, restart and byte checks.
+The local native transfer test now passes, including partial pause, manager/session
+recreation, saved native resume data, completion and byte-for-byte checks. It does not
+kill the Android process or test public DHT/tracker connectivity. Upload-mode gating
+fixed a real metadata/zero-priority peer disconnect uncovered by this test.
+TorrentDownloadService observes progress, stops when idle, handles onTimeout, and
+checks idle cleanup under the manager lock to avoid pausing a newly queued transfer.
+DownloadsViewModel and DownloadsScreen now support manual magnets, SAF torrent
+imports (10 MiB limit), real progress/speed/peers/status, pause/resume/remove, notification
+permission and errors. Removal retains content files. Wi-Fi-only is still unimplemented.
+The final full build/test/lint/device run is recorded in .tools/final-checks.log.
 
-3. **Data Layer & Persistence:**
-   - **Room Database (`AppDatabase`):** Entities (`AudiobookEntity`, `ChapterEntity`, `PlaybackProgressEntity`, `DownloadEntity`, `BookmarkEntity`) and DAOs (`AudiobookDao`, `PlaybackProgressDao`, `DownloadDao`, `BookmarkDao`).
-   - **DataStore:** Configured for user preferences and search query history.
-   - **HTML Scraper (`AudioBookBayParser`):** Jsoup parser extracting book listings, cover thumbnails, descriptions, and the 40-character hex info hash from tables.
-   - **Legal Fallback API (`LibriVoxApi`):** Retrofit contract for public-domain audiobooks.
-   - **Repository Implementations:** `AudiobookRepositoryImpl`, `AudiobookSearchRepositoryImpl`, `LibraryRepositoryImpl`, `PlaybackProgressRepositoryImpl`.
+## Environment and commands
 
-4. **Service Infrastructure (Android 14+ Compliant):**
-   - `TorrentDownloadService` registered with `foregroundServiceType="dataSync"`.
-   - `AudioPlaybackService` registered with `foregroundServiceType="mediaPlayback"`.
-   - Full permission declarations in [`AndroidManifest.xml`](file:///c:/Users/niko0/Documents/GitHub/AudioBookBayAndroid/app/src/main/AndroidManifest.xml).
+No Java/Android SDK was installed initially. Local tools are ignored under .tools.
+PowerShell, from repository root:
 
-5. **Dependency Injection (Hilt):**
-   - Modules in `com.audiobookbay.app.di`: `AppModule`, `DatabaseModule`, `NetworkModule`, `RepositoryModule`, `EngineModule`.
-
-6. **UI & Navigation:**
-   - `MainActivity` (Edge-to-edge, single activity).
-   - `AudioBookBayTheme` (Material3 with dynamic color support).
-   - `AudioBookBayNavHost` with type-safe `NavRoute` and bottom navigation bar.
-   - 8 Scaffolded screens: `HomeScreen`, `SearchScreen`, `CategoriesScreen`, `AudiobookDetailScreen`, `DownloadsScreen`, `LibraryScreen`, `NowPlayingScreen`, `SettingsScreen`.
-
-7. **Unit Tests:**
-   - `AudioBookBayParserTest` (validates HTML parsing, infohash extraction, and magnet link assembly).
-   - `DomainMappingTest` (validates Entity <-> Domain conversions).
-
----
-
-## 2. What Remains Unfinished (Your Implementation Scope)
-
-1. **`TorrentDownloadManagerImpl`:** Connect `org.libtorrent4j.SessionManager` to start torrent downloads, track piece progress, listen to alerts, and save fast-resume data.
-2. **`AudioPlaybackService` & `AudiobookPlayerImpl`:** Wire ExoPlayer playlist controls and connect UI playback actions.
-3. **UI ViewModels & Screen Implementations:**
-   - Replace placeholder UI in `HomeScreen`, `SearchScreen`, `AudiobookDetailScreen`, `DownloadsScreen`, `LibraryScreen`, `NowPlayingScreen`.
-   - Implement `HomeViewModel`, `SearchViewModel`, `DetailViewModel`, `DownloadsViewModel`, `PlayerViewModel`, `LibraryViewModel`.
-4. **Persistent Mini-Player:** Render a floating bottom mini-player bar when an audiobook is playing while browsing.
-
----
-
-## 3. Important Architecture Decisions You Must Follow
-
-1. **Never import `libtorrent4j` in the UI layer:** All torrent operations must be mediated by `TorrentDownloadManager`.
-2. **Never import ExoPlayer in the UI layer:** All playback operations must be mediated by `AudiobookPlayer`.
-3. **File Storage Location:** Always write torrent files to `context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)`. Do NOT attempt to use arbitrary paths on `/sdcard/`, as Android Scoped Storage will deny POSIX file access.
-4. **Throttled DB Writes:** In `PlaybackProgressRepository`, ensure playback position is saved at throttled intervals (every 10s) and on pause/stop, never on every frame tick.
-
----
-
-## 4. Immediate Next Implementation Task (Start Here!)
-
-### 👉 Task 1: Implement `HomeViewModel` and Connect `HomeScreen`
-1. Create `app/src/main/java/com/audiobookbay/app/ui/screens/home/HomeViewModel.kt`:
-   - Inject `AudiobookRepository`.
-   - Expose `val uiState: StateFlow<UiState<List<Audiobook>>>`.
-   - Call `audiobookRepository.getRecentAudiobooks(page = 1)` in `init`.
-2. Update `HomeScreen.kt`:
-   - Inject ViewModel using `hiltViewModel()`.
-   - Render a `LazyVerticalGrid` (2 columns) displaying book cover images (`AsyncImage` from Coil), titles, and authors.
-   - Handle `UiState.Loading` with a circular progress indicator, and `UiState.Error` with a retry button.
-   - Wire `onNavigateToDetail` to click events.
-
----
-
-## 5. Recommended Order of Development
-
-1. **Phase 1 (Discovery):** `HomeViewModel` + `HomeScreen` (displays real book cards from AudioBookBay / LibriVox).
-2. **Phase 2 (Search & Detail):** `SearchViewModel` + `DetailViewModel` (search queries and detail page).
-3. **Phase 3 (BitTorrent Engine):** Wire `org.libtorrent4j.SessionManager` inside `TorrentDownloadManagerImpl`.
-4. **Phase 4 (Downloads UI):** `DownloadsViewModel` + `DownloadsScreen` (progress bars, speed, pause/resume).
-5. **Phase 5 (Player):** Connect `NowPlayingScreen` with `AudioPlaybackService` via `AudiobookPlayerImpl`.
-6. **Phase 6 (Library):** `LibraryViewModel` + `LibraryScreen` (auto-resume, offline playback).
-
----
-
-## 6. Files You Should Inspect First
-
-1. [`app/src/main/java/com/audiobookbay/app/domain/repository/AudiobookRepository.kt`](file:///c:/Users/niko0/Documents/GitHub/AudioBookBayAndroid/app/src/main/java/com/audiobookbay/app/domain/repository/AudiobookRepository.kt) — Repository contract.
-2. [`app/src/main/java/com/audiobookbay/app/domain/repository/TorrentDownloadManager.kt`](file:///c:/Users/niko0/Documents/GitHub/AudioBookBayAndroid/app/src/main/java/com/audiobookbay/app/domain/repository/TorrentDownloadManager.kt) — Torrent engine contract.
-3. [`app/src/main/java/com/audiobookbay/app/torrent/TorrentDownloadManagerImpl.kt`](file:///c:/Users/niko0/Documents/GitHub/AudioBookBayAndroid/app/src/main/java/com/audiobookbay/app/torrent/TorrentDownloadManagerImpl.kt) — Implementation skeleton with TODOs.
-4. [`app/src/main/java/com/audiobookbay/app/data/remote/AudioBookBayParser.kt`](file:///c:/Users/niko0/Documents/GitHub/AudioBookBayAndroid/app/src/main/java/com/audiobookbay/app/data/remote/AudioBookBayParser.kt) — HTML parsing and magnet link synthesis logic.
-5. [`docs/TASKS.md`](file:///c:/Users/niko0/Documents/GitHub/AudioBookBayAndroid/docs/TASKS.md) — The master checklist of development items.
-
----
-
-## 7. Exact Commands to Run
-
-```bash
-# Verify compilation
-./gradlew compileDebugKotlin
-
-# Run unit tests
-./gradlew testDebugUnitTest
-
-# Assemble debug APK
-./gradlew assembleDebug
+```powershell
+$env:JAVA_HOME = (Get-ChildItem .tools/jdk -Directory | Select-Object -First 1).FullName
+$env:GRADLE_USER_HOME = "$PWD/.tools/gradle-cache"
+$env:ANDROID_HOME = "$PWD/.tools/android-sdk"
+.\gradlew.bat assembleDebug testDebugUnitTest lintDebug
+.\gradlew.bat connectedDebugAndroidTest
+.\.tools/android-sdk/platform-tools/adb.exe devices
 ```
-*(On Windows cmd/powershell, run `gradlew.bat <task>` or `.\gradlew <task>`)*
+
+Network-enabled execution is needed for uncached dependencies. local.properties
+points at .tools/android-sdk. The user authorized USB debugging and installation on
+the connected Samsung SM-A525F, Android 14. Wake the phone before manual UI checks;
+it sleeps quickly. Do not change the user's global network settings for offline tests.
+
+Logs: .tools/verify.log (discovery checks), .tools/device-tests.log (Room device test),
+.tools/engine-tests.log (native transfer checks), .tools/engine-build.log,
+.tools/final-checks.log (successful full verification).
+All are ignored. Test reports are under app/build/reports and app/build/outputs.
+
+## Next work
+
+1. Continue with lawful source-to-library integration and playback. The final full
+   check passed: assembleDebug, 34 unit tests, lintDebug, and 2 Android-device tests
+   (including partial pause/resume across native-session recreation). Evidence is
+   in .tools/final-checks.log. The final APK was reinstalled after test cleanup.
+2. Add ETA and file-selection controls, Wi-Fi-only constraints, and deletion choices.
+3. Connect lawful source downloads now that a local native transfer is verified.
+   LibriVox detail sections already contain audio URLs; Internet Archive metadata
+   must be inspected for actual torrent files rather than inventing URLs.
+4. Transfer completed audio into the library, implement robust Media3 playback,
+   progress persistence, bookmarks/sleep timer and mini-player.
+5. Categories/settings remain placeholders. Wi-Fi-only constraints are not implemented;
+   the engine currently rejects that option explicitly rather than pretending it works.
+6. Add migration/device/lifecycle/release checks; production readiness is still pending.
+
+## Known limits
+
+- Native ABIs currently include arm64 only. Downloads require API 28; the app still
+  has minSdk 26 with an explicit engine guard. Resolve supported-device policy before release.
+- Restored interrupted downloads require user resume to respect foreground-service
+  launch limits; they do not silently restart in the background.
+- Real public DHT/tracker transfers, Android 15 timeout behavior and process-kill
+  recovery still need independent verification beyond the local synthetic test.
+- Details explicitly state downloads/playback are under development; there is no
+  misleading working-looking download button yet.
+- No release signing or distribution has been performed.
+
+The later live search fix uses documented LibriVox caret-prefix title queries and treats 404/no-match responses as empty results. Assembly, 34 unit tests and lint passed in .tools/search-checks.log; the corrected APK has now been installed successfully.

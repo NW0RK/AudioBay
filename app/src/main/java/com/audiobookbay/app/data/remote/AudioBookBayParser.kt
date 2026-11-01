@@ -6,7 +6,6 @@ import com.audiobookbay.app.domain.model.AudiobookSource
 import com.audiobookbay.app.domain.model.TorrentInfo
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
 import timber.log.Timber
 
 /**
@@ -28,19 +27,22 @@ class AudioBookBayParser {
         val audiobooks = mutableListOf<Audiobook>()
 
         // AudioBookBay typically uses .post or article elements for listings
-        val postElements = document.select("div.post")
+        val postElements = document.select("div.post, article.post")
         for (post in postElements) {
             try {
                 val titleElement = post.selectFirst(".postTitle h2 a, .postTitle a, h2 a") ?: continue
                 val title = titleElement.text().trim()
                 val detailUrl = titleElement.absUrl("href")
                 val id = extractIdFromUrl(detailUrl)
+                if (title.isBlank() || id.isBlank()) continue
 
                 val coverImg = post.selectFirst(".postContent img")?.absUrl("src")
 
                 // Extract metadata text
                 val contentText = post.select(".postContent").text()
                 val category = post.select(".postInfo a[rel='category tag']").firstOrNull()?.text()
+                    ?: Regex("Category:\\s*(.*?)(?:Language:|$)", RegexOption.IGNORE_CASE)
+                        .find(post.select(".postInfo").text())?.groupValues?.get(1)?.trim()
 
                 audiobooks.add(
                     Audiobook(
@@ -67,9 +69,13 @@ class AudioBookBayParser {
     fun parseAudiobookDetail(html: String, idOrSlug: String, baseUrl: String): AudiobookDetail {
         val document: Document = Jsoup.parse(html, baseUrl)
 
-        val title = document.selectFirst(".postTitle h1, h1")?.text()?.trim() ?: idOrSlug
+        val title = document.selectFirst(".postTitle h1, article h1")?.text()?.trim()
+            ?.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("Unrecognized audiobook detail page")
         val coverUrl = document.selectFirst(".postContent img")?.absUrl("src")
-        val description = document.select(".postContent p").text().trim()
+        val metadataText = document.select(".postContent").text()
+        val description = document.select(".postContent p")
+            .filterNot { it.text().matches(Regex("(?is)^(?:Shared by|Written by|Read by|Format:|Bitrate:|Unabridged|Abridged).*")) }
+            .joinToString("\n\n") { it.text().trim() }.trim()
 
         // Extract Info Hash from table
         val infoHash = extractInfoHash(document)
@@ -97,11 +103,15 @@ class AudioBookBayParser {
         return AudiobookDetail(
             id = idOrSlug,
             title = title,
-            author = extractAuthor(description, title),
-            narrator = extractNarrator(description),
+            author = extractAuthor(metadataText, title),
+            narrator = extractNarrator(metadataText),
             description = description,
             coverImageUrl = coverUrl,
             torrentInfo = torrentInfo,
+            audioFormat = Regex("(?i)Format:\\s*([A-Za-z0-9/ ]+?)(?=Bitrate:|$)")
+                .find(metadataText)?.groupValues?.get(1)?.trim() ?: "",
+            bitrate = Regex("(?i)Bitrate:\\s*([0-9]+\\s*[Kk]bps|\\?)")
+                .find(metadataText)?.groupValues?.get(1),
             source = AudiobookSource.AUDIOBOOKBAY,
         )
     }
@@ -142,17 +152,17 @@ class AudioBookBayParser {
     }
 
     private fun extractAuthor(text: String, titleFallback: String): String {
-        val authorMatch = Regex("(?i)(?:author|written by)[:\\s]+([^\\n,\\.<]+)").find(text)
-        if (authorMatch != null) {
-            return authorMatch.groupValues[1].trim()
-        }
-        // Check if title has "by Author"
-        val byMatch = Regex("(?i)by\\s+([^\\–\\-\\[\\(]+)").find(titleFallback)
-        return byMatch?.groupValues?.get(1)?.trim() ?: "Unknown Author"
+        val author = metadataValue(text, "author|written by")
+        if (author != null) return author
+        val byMatch = Regex("(?i)\\bby\\s+(.+)$").find(titleFallback)
+        return byMatch?.groupValues?.get(1)?.trim()
+            ?: titleFallback.substringAfterLast(" - ", "").takeIf { it.isNotBlank() }
+            ?: "Unknown Author"
     }
 
-    private fun extractNarrator(text: String): String? {
-        val match = Regex("(?i)(?:narrator|read by)[:\\s]+([^\\n,\\.<]+)").find(text)
-        return match?.groupValues?.get(1)?.trim()
-    }
+    private fun extractNarrator(text: String): String? = metadataValue(text, "narrator|narrated by|read by")
+
+    private fun metadataValue(text: String, labels: String): String? =
+        Regex("(?i)(?:$labels)[:\\s]+(.+?)(?=\\s+(?:read by|narrated by|narrator|format|bitrate|language|unabridged|abridged)\\b|[\\n]|$)")
+            .find(text)?.groupValues?.get(1)?.trim()?.trimEnd('.')
 }

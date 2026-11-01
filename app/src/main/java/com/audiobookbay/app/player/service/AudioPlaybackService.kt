@@ -14,6 +14,7 @@ import dagger.hilt.android.AndroidEntryPoint
  * Background audio playback service powered by AndroidX Media3 / ExoPlayer.
  * Conforms to Android 14+ FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
 class AudioPlaybackService : MediaSessionService() {
 

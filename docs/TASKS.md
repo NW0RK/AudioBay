@@ -62,35 +62,38 @@ This checklist tracks preparation tasks completed by **Google Antigravity** and 
 ## Implementation Phase (Codex) — Pending Tasks
 
 ### Phase 1: Audiobook Discovery & Remote Data
-- [ ] Create `HomeViewModel` injecting `AudiobookRepository`.
-- [ ] Replace placeholder in `HomeScreen` with 2-column `LazyVerticalGrid` of audiobook cards.
-- [ ] Add Coil `AsyncImage` for book cover loading with placeholder & error drawables.
-- [ ] Implement pull-to-refresh on `HomeScreen`.
-- [ ] Implement pagination (load more items as user scrolls to the bottom).
-- [ ] Add loading skeletons / shimmers and error retry banner.
+- [x] Create `HomeViewModel` injecting `AudiobookRepository`.
+- [x] Replace placeholder in `HomeScreen` with 2-column `LazyVerticalGrid` of audiobook cards.
+- [x] Add Coil `AsyncImage` for book cover loading with placeholder & error drawables.
+- [x] Implement pull-to-refresh on `HomeScreen`.
+- [x] Implement pagination (load more items as user scrolls to the bottom).
+- [x] Add loading indicator, empty state, and recoverable error/retry controls.
+- [ ] Add loading skeletons/shimmers as optional visual polish.
 
 ### Phase 2: Search, Details & Caching
-- [ ] Create `SearchViewModel` with 300ms debounce on search queries.
-- [ ] Update `SearchScreen` with active search bar, search history chips, and results grid.
-- [ ] Create `DetailViewModel` fetching full audiobook details by ID/slug.
+- [x] Create `SearchViewModel` with 300ms debounce on search queries.
+- [x] Update `SearchScreen` with active search bar, search history chips, and results grid.
+- [x] Create `DetailViewModel` fetching full audiobook details by ID/slug.
 - [ ] Build `AudiobookDetailScreen` UI: Large cover art, expandable description, author/narrator chips, torrent details (size, seeders, format).
-- [ ] Cache viewed audiobooks into Room DB (`audiobookDao.upsertAudiobook`).
+- [x] Cache listings and complete details in Room without overwriting owned library records (`catalog_cache`, migration 1 to 2).
 - [ ] Build `CategoriesScreen` with grid of genres (Sci-Fi, Fantasy, Mystery, etc.) leading to filtered category lists.
 
 ### Phase 3: BitTorrent Engine Implementation
-- [ ] In `TorrentDownloadManagerImpl`, instantiate and configure `org.libtorrent4j.SessionManager`.
-- [ ] Configure `SettingsPack` (DHT enable, peer limits, upload/download rate caps).
-- [ ] Implement `AlertListener` handling (`TorrentAddedAlert`, `PieceFinishedAlert`, `TorrentFinishedAlert`, `SaveResumeDataAlert`).
-- [ ] Implement magnet link parsing and download queuing in `startDownload`.
-- [ ] Implement `.torrent` file parsing and queuing in `startDownloadFromFile`.
-- [ ] Implement selective file priority (ignore non-audio files, prioritize intro tracks).
-- [ ] Save fast-resume data to disk on pause/stop to allow instantaneous resume.
+- [x] In `TorrentDownloadManagerImpl`, instantiate and configure `org.libtorrent4j.SessionManager`.
+- [x] Configure `SettingsPack` (DHT enable, peer limits, upload/download rate caps).
+- [x] Handle actual `AddTorrentAlert` and resume-data alerts; poll native progress/completion every 2 seconds (the configured library has no `TorrentAddedAlert`).
+- [x] Implement magnet link parsing and download queuing in `startDownload`.
+- [x] Implement `.torrent` file parsing and queuing in `startDownloadFromFile`.
+- [x] Select audio files, validate paths, and support explicit file priorities.
+- [ ] Prioritize introductory tracks when appropriate.
+- [x] Save fast-resume data to disk on pause/stop to allow instantaneous resume.
 
 ### Phase 4: Download Management & Persistence
-- [ ] Create `DownloadsViewModel` observing `DownloadDao.observeAllDownloads()`.
-- [ ] Update `DownloadsScreen` with active download cards showing progress bar, speed (KB/s), peers, and ETA.
-- [ ] Connect Pause, Resume, and Cancel buttons to `TorrentDownloadManager`.
-- [ ] Implement ongoing foreground notification updates in `TorrentDownloadService`.
+- [x] Create `DownloadsViewModel` observing `DownloadDao.observeAllDownloads()`.
+- [x] Replace Downloads placeholder with manual magnet/torrent import and real queue cards (progress, speed, peers, localized status, errors).
+- [ ] Add ETA display and file-selection controls to Downloads UI.
+- [x] Connect Pause, Resume, and Cancel buttons to `TorrentDownloadManager`.
+- [x] Implement ongoing foreground notification updates in `TorrentDownloadService`.
 - [ ] Implement Wi-Fi-only download constraint checking before starting transfers.
 - [ ] Automatically transfer completed downloads to `LibraryRepository`.
 
@@ -118,8 +121,33 @@ This checklist tracks preparation tasks completed by **Google Antigravity** and 
 - [ ] Add TalkBack content descriptions and accessibility labels.
 
 ### Phase 8: Testing & Hardening
-- [ ] Write unit tests for `HomeViewModel`, `SearchViewModel`, and `DownloadsViewModel`.
+- [x] Write unit tests for `HomeViewModel`, `SearchViewModel`, and `DownloadsViewModel`.
 - [ ] Write unit tests for `TorrentDownloadManagerImpl` alert parsing.
 - [ ] Verify memory footprint during active torrent transfers.
 - [ ] Verify Android 15 foreground service timeout handling (`Service.onTimeout`).
 - [ ] Run ProGuard/R8 release build check.
+
+
+## Verification log — 2026-11-01
+
+- Restored missing official Gradle wrapper JAR and verified its SHA-256 against
+  Gradle's published checksum. Fixed invalid settings DSL and missing launcher
+  resource references; qualified the injected IO dispatcher.
+- Local Java 17, Android API 35 SDK and Gradle cache are under ignored `.tools/`.
+- Discovery/search/detail build, 25 unit tests, and lint passed before native-engine work.
+- Installed debug build on connected Samsung SM-A525F (Android 14); real listings,
+  covers, and detail navigation verified. Search exposed ignored website queries;
+  unrelated results now trigger LibriVox fallback.
+- On-device CatalogPersistenceTest passed with real Room close/reopen and an offline
+  remote source. The native lawful transfer test now passes, including partial pause, manager recreation, resume data and byte-for-byte audio verification.
+- Downloads UI now supports manual imports and queue controls. Library and playback UI remain incomplete. Do not treat the app as
+  production-ready. Detailed handoff and exact commands are in CODEX_HANDOFF.md.
+
+- Native milestone: 33 unit tests and 2 Android-device tests passed, plus lint.
+  The final full check after service-lifecycle cleanup also passed: assembleDebug,
+  testDebugUnitTest, lintDebug, and connectedDebugAndroidTest (.tools/final-checks.log).
+  The local transfer uses synthetic audio and direct loopback peers; it does not
+  verify public DHT/tracker reachability, Android 15 timeout, or OS process-kill recovery.
+- Removed obsolete broad storage permissions; torrent imports use the document picker
+  and downloaded files use app-specific external storage. Imported torrents are capped
+  at 10 MiB. Removing queue entries currently retains their content files.

@@ -2,6 +2,7 @@ package com.audiobookbay.app.di
 
 import android.content.Context
 import androidx.room.Room
+import com.audiobookbay.app.data.local.dao.CatalogCacheDao
 import com.audiobookbay.app.data.local.AppDatabase
 import com.audiobookbay.app.data.local.dao.AudiobookDao
 import com.audiobookbay.app.data.local.dao.BookmarkDao
@@ -26,9 +27,12 @@ object DatabaseModule {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME,
         )
-            .fallbackToDestructiveMigration()
+            .addMigrations(AppDatabase.MIGRATION_1_2)
             .build()
     }
+
+    @Provides
+    fun provideCatalogCacheDao(database: AppDatabase): CatalogCacheDao = database.catalogCacheDao()
 
     @Provides
     fun provideAudiobookDao(database: AppDatabase): AudiobookDao = database.audiobookDao()

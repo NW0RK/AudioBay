@@ -1,5 +1,6 @@
 package com.audiobookbay.app.di
 
+import com.audiobookbay.app.BuildConfig
 import com.audiobookbay.app.data.remote.AudioBookBayParser
 import com.audiobookbay.app.data.remote.LibriVoxApi
 import dagger.Module
@@ -23,17 +24,18 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(25, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BASIC
+                    level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
                 },
             )
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
-                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                    .header("User-Agent", "AudioBookBayAndroid/${BuildConfig.VERSION_NAME}")
                     .build()
                 chain.proceed(request)
             }

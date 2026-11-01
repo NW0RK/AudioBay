@@ -1,5 +1,9 @@
 package com.audiobookbay.app.data.local
 
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.audiobookbay.app.data.local.dao.CatalogCacheDao
+import com.audiobookbay.app.data.local.entity.CatalogCacheEntity
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.audiobookbay.app.data.local.dao.AudiobookDao
@@ -15,21 +19,28 @@ import com.audiobookbay.app.data.local.entity.PlaybackProgressEntity
 @Database(
     entities = [
         AudiobookEntity::class,
+        CatalogCacheEntity::class,
         ChapterEntity::class,
         PlaybackProgressEntity::class,
         DownloadEntity::class,
         BookmarkEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
+    abstract fun catalogCacheDao(): CatalogCacheDao
     abstract fun audiobookDao(): AudiobookDao
     abstract fun playbackProgressDao(): PlaybackProgressDao
     abstract fun downloadDao(): DownloadDao
     abstract fun bookmarkDao(): BookmarkDao
 
     companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `catalog_cache` (`cacheKey` TEXT NOT NULL, `payload` TEXT NOT NULL, PRIMARY KEY(`cacheKey`))")
+            }
+        }
         const val DATABASE_NAME = "audiobookbay.db"
     }
 }
