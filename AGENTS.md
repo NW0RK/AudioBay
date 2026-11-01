@@ -187,3 +187,7 @@ libtorrent uses private app-specific staging; publish verified content through S
 checkpoint and verify copies, then delete staging. Completed shared files survive
 queue removal and uninstall. Never silently use an alternate shared root or bypass
 Android folder access restrictions. Legacy Room tables are retained for upgrades.
+
+## User-approved publishing preference - 2026-11-01
+
+After completing each requested change, commit and push it to GitHub and publish a new GitHub release containing the updated installable APK and checksum. Increment versionName and versionCode, run relevant checks, exclude private build-time credentials with -PpublicBuild=true, and preserve the existing signing certificate for upgrades. This is standing authorization; do not ask for publishing confirmation each time.

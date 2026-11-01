@@ -29,9 +29,10 @@ class AppUpdateRepositoryTest {
     private val device = mockk<UpdateDevice>()
     private val calls = mutableListOf<Call>()
     private var lastAttempt = 0L
-    private val asset = "AudioBay-0.1.2-preview.apk"
-    private val base = "https://github.com/NW0RK/AudioBay/releases/download/v0.1.2"
-    private val release = """[{"tag_name":"v0.1.2","draft":false,"prerelease":true,"body":"Notes","assets":[{"name":"$asset","state":"uploaded","size":3,"browser_download_url":"$base/$asset"},{"name":"SHA256SUMS.txt","state":"uploaded","size":90,"browser_download_url":"$base/SHA256SUMS.txt"}]}]"""
+    private val nextVersion = "${BuildConfig.VERSION_NAME.substringBefore('.').toInt() + 1}.0.0"
+    private val asset = "AudioBay-$nextVersion-preview.apk"
+    private val base = "https://github.com/NW0RK/AudioBay/releases/download/v$nextVersion"
+    private val release = """[{"tag_name":"v$nextVersion","draft":false,"prerelease":true,"body":"Notes","assets":[{"name":"$asset","state":"uploaded","size":3,"browser_download_url":"$base/$asset"},{"name":"SHA256SUMS.txt","state":"uploaded","size":90,"browser_download_url":"$base/SHA256SUMS.txt"}]}]"""
     private var response: (Request, Callback, Call) -> Unit = { request, callback, call ->
         val body = when {
             request.url.encodedPath.endsWith("SHA256SUMS.txt") -> "${"ab".repeat(32)}  $asset"

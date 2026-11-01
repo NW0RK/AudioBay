@@ -17,8 +17,14 @@ class ApiKeyValidationTest {
         assertEquals(key, normalizeApiKey(" '$key' "))
     }
 
+    @Test fun acceptsDottedKeysWithoutChangingTheirContents() {
+        val key = "AQ." + "aB8_-9".repeat(8)
+        assertEquals(key, normalizeApiKey(key))
+        assertEquals(key, normalizeApiKey("\uFEFF \"$key\"\n"))
+    }
+
     @Test fun rejectsHeadersWhitespaceAndOversizedInput() {
-        listOf("key\r\nheader", "Bearer key", "a".repeat(513), "ключ").forEach { value ->
+        listOf("key\r\nheader", "Bearer key", "AQ.ab cd", "API_KEY=AQ.abc", "AQ.ab\u200Bcd", "a".repeat(513), "ключ").forEach { value ->
             assertThrows(IllegalArgumentException::class.java) { normalizeApiKey(value) }
         }
     }

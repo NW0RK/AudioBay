@@ -307,3 +307,6 @@ Verification: assembleDebug, testDebugUnitTest (73 tests), lintDebug and four pe
 - [x] Verify optimized 0.1.1/code 2 assembly, 115 JVM tests, release lint (0 errors) and device-test APK compilation (.tools/update-final-checks.log). Prepare release APK, matching development signature and checksum.
 - [ ] Reproduce the originally reported key-save failure on the phone and run the isolated real-Keystore test plus optimized Settings visual checks; no Android device connected.
 - [ ] Exercise actual permission denial/installer cancellation and an installed upgrade while verifying Saved books, queue, persistent folder grants, preferences and the saved key. No Room or audiobook-storage migration was introduced.
+
+- [x] Accept dotted Gemini credentials (including AQ. format) unchanged; cover clipboard cleanup and rejection of embedded spaces, labels and invisible characters.
+- [x] Prepare public 0.1.2/code 3 with unchanged signing certificate; verify 116 release tests, assembly, lint, alignment, v2/v3 signatures and private-key exclusion. Make updater repository tests independent of the current app version.

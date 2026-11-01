@@ -122,7 +122,8 @@ internal fun normalizeApiKey(input: String): String {
         trimmed.substring(1, trimmed.lastIndex).cleanEdges()
     } else trimmed
     return key.also {
-        require(it.length <= 512 && it.all { char -> char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char == '-' || char == '_' }) {
+        // Preserve dotted credentials unchanged for Google to validate.
+        require(it.length <= 512 && it.all { char -> char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char == '-' || char == '_' || char == '.' }) {
             "Invalid API key"
         }
     }
