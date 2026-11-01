@@ -11,6 +11,7 @@ class AudioBookBayApp : Application() {
     override fun onCreate() {
         super.onCreate()
         crashReports.installHandler()
+        crashReports.recoverInterruptedSession()
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }

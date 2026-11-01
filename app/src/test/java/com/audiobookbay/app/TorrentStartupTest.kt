@@ -26,7 +26,7 @@ class TorrentStartupTest {
         val settings = mockk<DownloadNetworkSettings>()
         every { settings.wifiOnly } returns flowOf(false)
         val manager = TorrentDownloadManagerImpl(context, mockk<DownloadDao>(), Json,
-            mockk<BookPublisher>(), settings, mockk<NetworkStatus>(), Dispatchers.IO)
+            mockk<BookPublisher>(), settings, mockk<NetworkStatus>(), mockk<com.audiobookbay.app.diagnostics.CrashReports>(relaxed = true), Dispatchers.IO)
         repeat(2) {
             val result = manager.startDownload("test", "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567",
                 DownloadMetadata("Author", "Title", "content://test/unused"))

@@ -317,3 +317,10 @@ Verification: assembleDebug, testDebugUnitTest (73 tests), lintDebug and four pe
 - [x] Collect Android 11+ historical crash/native crash/ANR exit information on opening Settings; native frames are best effort and omit private paths.
 - [x] Add Settings report preview, copy, delete, refresh and manual GitHub issue draft; explain public visibility and require user submission.
 - [x] Verify 119 release unit tests, isolated real-phone persistence/handler delegation test, release lint (0 errors), public release assembly, existing certificate, APK alignment and credential exclusion.
+
+## Missing crash-report recovery - 2026-11-01
+
+- [x] Persist native-engine checkpoints before startup/submission/shutdown and recover unfinished sessions on process restart without depending on Android crash classification.
+- [x] Save sanitized handled torrent errors; include other Android exit classifications and isolate history-read failures from local report display.
+- [x] Provide Create diagnostic report even when no crash record exists; explicitly distinguish interruptions and manual diagnostics from confirmed crashes.
+- [x] Verify 119 release unit tests, three phone tests (handler delegation, native interruption recovery and manual fallback when exit history fails), release lint with zero errors, assembly, signing/alignment and public APK credential exclusion.

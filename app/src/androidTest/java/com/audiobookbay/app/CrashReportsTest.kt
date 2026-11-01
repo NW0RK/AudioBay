@@ -9,6 +9,44 @@ import org.junit.Test
 import java.io.File
 
 class CrashReportsTest {
+    @Test fun interruptedNativeSessionRecoveredWithoutAndroidCrashRecord() {
+        val target = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(target.cacheDir, "native-marker-test-${System.nanoTime()}").apply { mkdirs() }
+        val context = object : ContextWrapper(target) { override fun getNoBackupFilesDir(): File = root }
+        try {
+            CrashReports(context, Dispatchers.IO).checkpoint(CrashReports.Stage.ADD_TORRENT)
+            val nextProcess = CrashReports(context, Dispatchers.IO)
+            nextProcess.recoverInterruptedSession()
+            val saved = File(root, "crash-reports").listFiles()!!.single().readText()
+            assertTrue(saved.contains("ADD_TORRENT"))
+            assertTrue(saved.contains("not proof of a crash"))
+            nextProcess.recoverInterruptedSession()
+            assertEquals(1, File(root, "crash-reports").listFiles()!!.size)
+            nextProcess.checkpoint(CrashReports.Stage.ENGINE_RUNNING)
+            nextProcess.engineStopped()
+            nextProcess.recoverInterruptedSession()
+            assertEquals(1, File(root, "crash-reports").listFiles()!!.size)
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun manualDiagnosticRemainsAvailableWhenAndroidHistoryFails() = kotlinx.coroutines.runBlocking {
+        val target = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(target.cacheDir, "manual-diagnostic-test-${System.nanoTime()}").apply { mkdirs() }
+        val context = object : ContextWrapper(target) {
+            override fun getNoBackupFilesDir(): File = root
+            override fun getSystemService(name: String): Any? = throw SecurityException("History unavailable")
+        }
+        try {
+            val reports = CrashReports(context, Dispatchers.IO)
+            reports.createDiagnostic()
+            val saved = reports.load().single()
+            assertTrue(saved.contains("Manually requested diagnostic"))
+            assertTrue(saved.contains("not a confirmed crash"))
+            reports.clear()
+            assertTrue(reports.load().isEmpty())
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun persistsSanitizedReportAndDelegatesToAndroidHandler() {
         val target = InstrumentationRegistry.getInstrumentation().targetContext
         val root = File(target.cacheDir, "crash-report-test-${System.nanoTime()}").apply { mkdirs() }

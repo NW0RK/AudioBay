@@ -34,10 +34,11 @@ class CrashReportViewModel @Inject constructor(private val reports: CrashReports
     private val mutableError = MutableStateFlow(false)
     val error = mutableError.asStateFlow()
     init { refresh() }
-    fun refresh(clear: Boolean = false) { viewModelScope.launch {
+    fun refresh(clear: Boolean = false, diagnostic: Boolean = false) { viewModelScope.launch {
         mutableError.value = false
         try {
             if (clear) reports.clear()
+            if (diagnostic) reports.createDiagnostic()
             mutableReports.value = reports.load()
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { mutableError.value = true }
@@ -57,6 +58,7 @@ fun CrashReportSettings() {
             Text(stringResource(R.string.crashes_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.crashes_description), style = MaterialTheme.typography.bodySmall)
             if (reports.isEmpty()) Text(stringResource(R.string.crashes_empty))
+            OutlinedButton(onClick = { vm.refresh(diagnostic = true) }) { Text(stringResource(R.string.crashes_create)) }
             reports.forEachIndexed { index, report ->
                 var expanded by remember(report) { mutableStateOf(false) }
                 TextButton(onClick = { expanded = !expanded }) { Text(stringResource(R.string.crashes_view, index + 1)) }

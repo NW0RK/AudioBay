@@ -54,7 +54,7 @@ class TorrentTransferTest {
         }
         fun newManager() = TorrentDownloadManagerImpl(testContext, db.downloadDao(), Json,
             BookPublisher(File(files, "publication-state"), documentStorage, Json),
-            DownloadNetworkSettings(networkData, Dispatchers.IO), NetworkStatus(testContext), Dispatchers.IO)
+            DownloadNetworkSettings(networkData, Dispatchers.IO), NetworkStatus(testContext), com.audiobookbay.app.diagnostics.CrashReports(testContext, Dispatchers.IO), Dispatchers.IO)
         var manager = newManager()
         try {
             val seedDir = File(testRoot, "seed").apply { mkdirs() }
