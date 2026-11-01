@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -24,7 +25,7 @@ import com.audiobookbay.app.domain.model.UiState
 import com.audiobookbay.app.ui.components.*
 
 @Composable
-fun SearchScreen(onNavigateToDetail: (String) -> Unit, onBrowse: () -> Unit = {}, onDownload: (String?) -> Unit = {}) {
+fun SearchScreen(onNavigateToDetail: (String) -> Unit, resetToken: Int = 0, onBrowse: () -> Unit = {}, onDownload: (String?) -> Unit = {}) {
     val actions = rememberCatalogActions()
     val vm: SearchViewModel = hiltViewModel()
     val query by vm.query.collectAsStateWithLifecycle()
@@ -35,6 +36,17 @@ fun SearchScreen(onNavigateToDetail: (String) -> Unit, onBrowse: () -> Unit = {}
     val pageError by vm.pageError.collectAsStateWithLifecycle()
     val keyboard = LocalSoftwareKeyboardController.current
     val gridState = rememberLazyGridState()
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    var handledReset by androidx.compose.runtime.saveable.rememberSaveable { mutableIntStateOf(-1) }
+    LaunchedEffect(resetToken) {
+        if (handledReset != resetToken) {
+            vm.reset()
+            gridState.scrollToItem(0)
+            handledReset = resetToken
+            focus.requestFocus()
+            keyboard?.show()
+        }
+    }
     val nearEnd by remember { derivedStateOf { val info = gridState.layoutInfo; info.totalItemsCount > 0 && (info.visibleItemsInfo.lastOrNull()?.index ?: 0) >= info.totalItemsCount - 5 } }
     LaunchedEffect(nearEnd, state) { if (nearEnd && state is UiState.Success && !loadingMore && !pageError && !endReached) vm.loadMore() }
     LaunchedEffect(query) { gridState.scrollToItem(0) }
@@ -49,7 +61,7 @@ fun SearchScreen(onNavigateToDetail: (String) -> Unit, onBrowse: () -> Unit = {}
             leadingIcon = { Icon(androidx.compose.material.icons.Icons.Default.Search, null) },
             trailingIcon = { if (query.isNotEmpty()) IconButton(shape = MaterialTheme.shapes.small, onClick = { vm.setQuery("") }) { Icon(androidx.compose.material.icons.Icons.Default.Close, stringResource(R.string.clear_search)) } },
             shape = MaterialTheme.shapes.large,
-            label = { Text(stringResource(R.string.search_hint)) }, modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.search_hint)) }, modifier = Modifier.fillMaxWidth().then(Modifier.focusRequester(focus)),
         )
         if (query.isBlank() && history.isNotEmpty()) {
             com.audiobookbay.app.ui.components.SectionHeading(stringResource(R.string.recent_searches))

@@ -69,7 +69,7 @@ class LiteraryCatalogUiTest {
         compose.onNodeWithTag("discovery_grid").performScrollToNode(hasText("Book 39"))
         compose.onNodeWithText("Book 39").assertIsDisplayed()
         compose.runOnIdle { reset.intValue++ }
-        compose.onNodeWithText(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.featured_shelf)).assertIsDisplayed()
+        compose.onNodeWithText(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.recently_added)).assertIsDisplayed()
     }
     @Test fun coverCollapsesAndBackRemainsAvailable() {
         var back = 0
@@ -77,11 +77,21 @@ class LiteraryCatalogUiTest {
             AudiobookDetailContent(UiState.Success(AudiobookDetail("book", "A long literary title", "Author",
                 description = "A chapter of an extraordinary journey. ".repeat(100))), {}, { back++ }, {})
         } }
-        val before = compose.onNodeWithTag("detail_cover").fetchSemanticsNode().boundsInRoot.height
         compose.onNodeWithTag("detail_content").performTouchInput { swipeUp() }
-        val after = compose.onNodeWithTag("detail_cover").fetchSemanticsNode().boundsInRoot.height
-        assertTrue(after < before)
+        val covers = compose.onAllNodesWithTag("detail_cover").fetchSemanticsNodes()
+        assertTrue(covers.isEmpty() || covers.first().boundsInRoot.top < 0f)
         compose.onNodeWithContentDescription("Back").performClick()
         compose.runOnIdle { assertEquals(1, back) }
+    }
+    @Test fun homeMetadataPlacesSizeBelowLanguageAndFormat() {
+        compose.setContent { AudioBookBayTheme {
+            AudiobookCard(Audiobook("id", "Example", "Author", language = "English", audioFormat = "M4B", formattedSize = "150 MB"),
+                Modifier.width(156.dp), homeMetadata = true, onClick = {})
+        } }
+        val language = compose.onNodeWithText("English", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val format = compose.onNodeWithText("M4B", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val size = compose.onNodeWithText("150 MB", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertEquals(language.top, format.top)
+        assertTrue(size.top >= language.bottom)
     }
 }

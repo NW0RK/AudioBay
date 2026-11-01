@@ -120,4 +120,16 @@ class DiscoveryRemoteTest {
         val source = AudiobookRemoteDataSourceImpl(client, AudioBookBayParser(), api, StandardTestDispatcher(testScheduler))
         assertEquals("A Series Story", (source.searchAudiobooks("Witcher", 2) as Resource.Success).data.single().title)
     }
+    @Test fun `category requests use type path and preserve page`() = runTest {
+        val paths = mutableListOf<String>()
+        val client = searchClient("""<h1>Free Fantasy Audio Books Download</h1>""") { paths.add(it.encodedPath) }
+        val source = AudiobookRemoteDataSourceImpl(client, AudioBookBayParser(), api, StandardTestDispatcher(testScheduler))
+        assertTrue(source.getAudiobooksByCategory("fantasy", 1) is Resource.Success)
+        assertTrue(source.getAudiobooksByCategory("fantasy", 2) is Resource.Success)
+        assertEquals(listOf("/audio-books/type/fantasy/", "/audio-books/type/fantasy/page/2/"), paths)
+    }
+    @Test fun `unrecognized category response is retryable error`() = runTest {
+        val source = AudiobookRemoteDataSourceImpl(searchClient("<h1>Just a moment</h1>"), AudioBookBayParser(), api, StandardTestDispatcher(testScheduler))
+        assertTrue(source.getAudiobooksByCategory("fantasy", 1) is Resource.Error)
+    }
 }

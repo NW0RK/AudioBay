@@ -75,4 +75,19 @@ class SearchViewModelTest {
         runCurrent()
         coVerify(exactly = 1) { repository.searchAudiobooks("Alice", 1) }
     }
+    @Test fun `reset cancels search and clears results and pagination`() = runTest(dispatcher) {
+        coEvery { repository.searchAudiobooks("old", 1) } coAnswers { delay(1000); Resource.Success(listOf(Audiobook("old", "Old", "Author"))) }
+        val vm = SearchViewModel(repository)
+        vm.setQuery("old")
+        advanceTimeBy(300); runCurrent()
+        vm.reset(); advanceUntilIdle()
+        assertEquals("", vm.query.value)
+        assertEquals(UiState.Idle, vm.uiState.value)
+        assertFalse(vm.isLoadingMore.value)
+        assertFalse(vm.pageError.value)
+        assertFalse(vm.endReached.value)
+        vm.loadMore(); runCurrent()
+        coVerify(exactly = 1) { repository.searchAudiobooks(any(), any()) }
+        coVerify(exactly = 0) { repository.clearSearchHistory() }
+    }
 }

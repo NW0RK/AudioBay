@@ -25,6 +25,16 @@ class SearchViewModel @Inject constructor(private val repository: AudiobookSearc
     private val _pageError = MutableStateFlow(false)
     val pageError = _pageError.asStateFlow()
 
+    fun reset() {
+        request?.cancel()
+        _query.value = ""
+        page = 0
+        _endReached.value = false
+        _isLoadingMore.value = false
+        _pageError.value = false
+        _uiState.value = UiState.Idle
+    }
+
     fun setQuery(value: String) {
         if (_query.value == value) return
         _query.value = value

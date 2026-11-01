@@ -9,12 +9,7 @@ import com.audiobookbay.app.ui.components.EditorialPanel
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.ui.input.nestedscroll.*
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.graphics.graphicsLayer
 import com.audiobookbay.app.ui.components.MessageState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -56,47 +51,21 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
                 val book = result.data
 
                 val list = rememberLazyListState()
-                val density = LocalDensity.current
-                val expandedHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).coerceIn(160f, 320f).dp
-                val range = with(density) { (expandedHeight - 72.dp).toPx() }
-                var offset by remember(book.id) { mutableFloatStateOf(0f) }
-                LaunchedEffect(range) { offset = offset.coerceIn(-range, 0f) }
-                val connection = remember(list, range) {
-                    object : NestedScrollConnection {
-                        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                            if (available.y < 0 || (list.firstVisibleItemIndex == 0 && list.firstVisibleItemScrollOffset == 0)) {
-                                val old = offset
-                                offset = (offset + available.y).coerceIn(-range, 0f)
-                                return Offset(0f, offset - old)
-                            }
-                            return Offset.Zero
-                        }
-                        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                            if (available.y <= 0) return Offset.Zero
-                            val old = offset
-                            offset = (offset + available.y).coerceIn(-range, 0f)
-                            return Offset(0f, offset - old)
-                        }
-                    }
-                }
-                Column(Modifier.fillMaxSize().nestedScroll(connection)) {
-                    val fraction = (-offset / range).coerceIn(0f, 1f)
-                    Box(Modifier.testTag("detail_cover").fillMaxWidth().height(expandedHeight + with(density) { offset.toDp() })
-                        .background(MaterialTheme.colorScheme.surfaceContainer)) {
+                Box(Modifier.fillMaxSize()) {
+                    LazyColumn(state = list, modifier = Modifier.testTag("detail_content").fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                    item {
+                        var ratio by remember(book.coverImageUrl) { mutableFloatStateOf(1f) }
                         AsyncImage(model = book.coverImageUrl, contentDescription = null,
                             placeholder = painterResource(R.drawable.cover_placeholder),
                             error = painterResource(R.drawable.cover_placeholder), fallback = painterResource(R.drawable.cover_placeholder),
+                            onSuccess = { result ->
+                                val image = result.result.drawable
+                                if (image.intrinsicWidth > 0 && image.intrinsicHeight > 0) ratio = image.intrinsicWidth.toFloat() / image.intrinsicHeight
+                            },
                             contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 64.dp, vertical = 12.dp).graphicsLayer { alpha = 1f - fraction })
-                        if (fraction > 0.8f) Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 1,
-                            overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.Center).padding(horizontal = 80.dp))
-                        if (book.torrentInfo?.magnetUri != null) FilledIconButton(shape = MaterialTheme.shapes.small, onClick = { onDownload(book.id) },
-                            modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)) {
-                            Icon(Icons.Default.Download, stringResource(R.string.start_download))
-                        }
+                            modifier = Modifier.testTag("detail_cover").fillMaxWidth().aspectRatio(ratio))
                     }
-                    LazyColumn(state = list, modifier = Modifier.testTag("detail_content").fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                     item {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Spacer(Modifier.height(20.dp))
@@ -163,7 +132,7 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
                             }
                         }
                         items(book.comments, key = { it.id }) { comment ->
-                            EditorialPanel(Modifier.fillMaxWidth()) {
+                            EditorialPanel(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(comment.author.ifBlank { stringResource(R.string.comment_reader) }, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                                     if (comment.date.isNotBlank()) Text(comment.date, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -177,6 +146,14 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
                         items(book.chapters, key = { it.id }) { chapter -> Text("${chapter.trackNumber}. ${chapter.title}") }
                     }
                 }
+                    if (list.firstVisibleItemIndex > 0) Box(Modifier.fillMaxWidth().height(64.dp).background(MaterialTheme.colorScheme.surface)) {
+                        Text(book.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.align(Alignment.Center).padding(horizontal = 72.dp), style = MaterialTheme.typography.titleMedium)
+                    }
+                    if (book.torrentInfo?.magnetUri != null) FilledIconButton(onClick = { onDownload(book.id) },
+                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)) {
+                        Icon(Icons.Default.Download, stringResource(R.string.start_download))
+                    }
                 }
             }
         }
@@ -195,7 +172,7 @@ fun AudiobookDetailContent(state: UiState<AudiobookDetail>, onRetry: () -> Unit,
 
 @Composable
 private fun DetailPanel(content: @Composable ColumnScope.() -> Unit) {
-    EditorialPanel(Modifier.fillMaxWidth()) {
+    EditorialPanel(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
 }

@@ -171,15 +171,19 @@ class AudiobookRemoteDataSourceImpl @Inject constructor(
     override suspend fun getAudiobooksByCategory(categorySlug: String, page: Int): Resource<List<Audiobook>> = withContext(ioDispatcher) {
         try {
             val url = if (page <= 1) {
-                "$currentBaseUrl/audio-books/$categorySlug/"
+                "$currentBaseUrl/audio-books/type/$categorySlug/"
             } else {
-                "$currentBaseUrl/audio-books/$categorySlug/page/$page/"
+                "$currentBaseUrl/audio-books/type/$categorySlug/page/$page/"
             }
             val request = Request.Builder().url(url).build()
             okHttpClient.newCall(request).execute().use { response ->
 
             if (response.isSuccessful) {
                 val html = response.body?.string().orEmpty()
+                val document = org.jsoup.Jsoup.parse(html, currentBaseUrl)
+                if (document.select("h1").none { it.text().contains("Audio Books", ignoreCase = true) }) {
+                    return@withContext Resource.Error("Category page unavailable")
+                }
                 val parsed = parser.parseAudiobookList(html, currentBaseUrl)
                 return@withContext Resource.Success(parsed)
             }
@@ -199,13 +203,15 @@ class AudiobookRemoteDataSourceImpl @Inject constructor(
             Category(slug = "sci-fi", displayName = "Science Fiction"),
             Category(slug = "fantasy", displayName = "Fantasy"),
             Category(slug = "mystery", displayName = "Mystery"),
-            Category(slug = "thriller", displayName = "Thriller & Suspense"),
-            Category(slug = "biographies-memoirs", displayName = "Biographies & Memoirs"),
+            Category(slug = "thriller", displayName = "Thriller"),
+            Category(slug = "suspense", displayName = "Suspense"),
+            Category(slug = "autobiography-biographies", displayName = "Biographies & Memoirs"),
             Category(slug = "history", displayName = "History"),
             Category(slug = "horror", displayName = "Horror"),
             Category(slug = "business", displayName = "Business & Economics"),
             Category(slug = "self-help", displayName = "Self Help & Motivation"),
-            Category(slug = "action-adventure", displayName = "Action & Adventure"),
+            Category(slug = "action", displayName = "Action"),
+            Category(slug = "adventure", displayName = "Adventure"),
             Category(slug = "children", displayName = "Children's Audiobooks"),
             Category(slug = "romance", displayName = "Romance"),
         )

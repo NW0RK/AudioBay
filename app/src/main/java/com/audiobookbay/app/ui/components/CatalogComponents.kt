@@ -98,6 +98,7 @@ fun AudiobookCard(
     state: BookCardState = BookCardState(),
     onSave: () -> Unit = {},
     onDownload: () -> Unit = {},
+    homeMetadata: Boolean = false,
     onClick: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -109,7 +110,7 @@ fun AudiobookCard(
         if (compact) {
             Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 BookCover(book, Modifier.width(88.dp).height(128.dp))
-                BookCardText(book, state, onSave, onDownload, Modifier.weight(1f), true)
+                BookCardText(book, state, onSave, onDownload, Modifier.weight(1f), true, homeMetadata)
             }
         } else {
             Column {
@@ -117,7 +118,7 @@ fun AudiobookCard(
                     BookCover(book, Modifier.fillMaxWidth().aspectRatio(1f))
                     state.download?.let { DownloadProgress(it, Modifier.align(Alignment.BottomCenter)) }
                 }
-                BookCardText(book, state, onSave, onDownload, Modifier.padding(12.dp))
+                BookCardText(book, state, onSave, onDownload, Modifier.padding(12.dp), homeMetadata = homeMetadata)
             }
         }
     }
@@ -130,11 +131,21 @@ private fun BookCover(book: Audiobook, modifier: Modifier) {
         contentScale = ContentScale.Fit, modifier = modifier.clip(RoundedCornerShape(6.dp)))
 }
 @Composable
-private fun BookCardText(book: Audiobook, state: BookCardState, onSave: () -> Unit, onDownload: () -> Unit, modifier: Modifier, compact: Boolean = false) {
+private fun BookCardText(book: Audiobook, state: BookCardState, onSave: () -> Unit, onDownload: () -> Unit, modifier: Modifier, compact: Boolean = false, homeMetadata: Boolean = false) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(book.author, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        BookSummaryMetadata(book)
+        if (homeMetadata) {
+            val language = book.language.orEmpty().trim()
+            val format = book.audioFormat.orEmpty().trim()
+            if (language.isNotEmpty() || format.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
+                if (language.isNotEmpty()) Text(language, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                if (language.isNotEmpty() && format.isNotEmpty()) Text(" · ", style = MaterialTheme.typography.labelMedium)
+                if (format.isNotEmpty()) Text(format, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            book.formattedSize?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }
+        } else BookSummaryMetadata(book)
         state.download?.let {
             DownloadStatusBadge(it.status)
             if (compact) DownloadProgress(it)

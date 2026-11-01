@@ -27,6 +27,7 @@ import com.audiobookbay.app.ui.screens.settings.SettingsScreen
 @Composable
 fun AudioBookBayNavHost() {
     val navController = rememberNavController()
+    var searchResetToken by rememberSaveable { mutableIntStateOf(0) }
     var homeResetToken by rememberSaveable { mutableIntStateOf(0) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -41,6 +42,7 @@ fun AudioBookBayNavHost() {
                     }?.route,
                     onNavigate = { route ->
                         if (route == NavRoute.Home) homeResetToken++
+                        if (route == NavRoute.Search) searchResetToken++
                         navController.navigateToTab(route)
                     },
                     modifier = Modifier.navigationBarsPadding()
@@ -69,6 +71,7 @@ fun AudioBookBayNavHost() {
             }
             composable<NavRoute.Search> {
                 SearchScreen(
+                    resetToken = searchResetToken,
                     onBrowse = { navController.navigateToTab(NavRoute.Home) },
                     onDownload = { navController.navigate(NavRoute.Downloads(it)) },
                     onNavigateToDetail = { id ->
@@ -113,6 +116,6 @@ internal fun NavHostController.navigateToTab(route: NavRoute) {
     navigate(route) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
-        restoreState = route != NavRoute.Home
+        restoreState = route != NavRoute.Home && route != NavRoute.Search
     }
 }

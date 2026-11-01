@@ -46,4 +46,14 @@ class HomeNavigationTest {
             compose.runOnIdle { assertTrue(nav.currentDestination!!.hasRoute<NavRoute.Home>()); assertNull(nav.previousBackStackEntry) }
         }
     }
+    @Test fun searchDoesNotRestorePreviouslySavedDetailStack() {
+        render()
+        compose.runOnIdle { nav.navigateToTab(NavRoute.Search) }
+        compose.runOnIdle { nav.navigate(NavRoute.AudiobookDetail("book")) }
+        compose.runOnIdle { nav.navigateToTab(NavRoute.Home) }
+        compose.runOnIdle { nav.navigateToTab(NavRoute.Search) }
+        compose.runOnIdle { assertTrue(nav.currentDestination!!.hasRoute<NavRoute.Search>()) }
+        compose.runOnIdle { nav.navigateToTab(NavRoute.Search) }
+        compose.runOnIdle { assertTrue(nav.currentDestination!!.hasRoute<NavRoute.Search>()) }
+    }
 }

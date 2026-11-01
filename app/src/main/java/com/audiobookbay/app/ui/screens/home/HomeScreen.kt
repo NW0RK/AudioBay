@@ -135,6 +135,6 @@ fun HomeScreen(
 @Composable
 private fun HomeCard(book: Audiobook, actions: CatalogActions?, onDownload: (String?) -> Unit, onDetail: (String) -> Unit, modifier: Modifier, compact: Boolean = false) {
     val state = actions?.state(book) ?: BookCardState()
-    AudiobookCard(book, modifier, compact, state, onSave = { actions?.toggle(book) },
+    AudiobookCard(book, modifier, compact, state, homeMetadata = true, onSave = { actions?.toggle(book) },
         onDownload = { onDownload(if (state.download == null) book.id else null) }, onClick = { onDetail(book.id) })
 }
