@@ -5,6 +5,10 @@
 > **Repository:** `AudioBookBayAndroid`  
 > **Status:** Preparation Phase Complete — Ready for Feature Implementation  
 
+## Default Branch Workflow
+
+- Work directly on `main` by default. Create or use a feature branch only when a new feature or other task makes branch isolation necessary.
+
 ---
 
 ## 1. Project Purpose & Vision
